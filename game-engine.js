@@ -16,6 +16,18 @@ export const FAMILY_STEP = 0.1, FAMILY_MAX = 3; // Family: +10% за прохо�
 const round10 = (x) => Math.round(x / 10) * 10;
 export const MOVE_COST = [null, 0, 0, 300, 600, 1000, 3000, 10000]; // индекс = число шагов
 export const START_CASH = 1500;
+export const GOALS = [30000, 50000, 100000, 200000];
+// сколько миллисекунд все смотрят на карты и кубики после хода (в это время таймер стоит)
+export function eventPause(evs) {
+  let ms = 0;
+  for (const e of evs || []) {
+    if (['race_roll', 'race_reroll', 'taxi', 'theft_roll'].includes(e.type) || (e.type === 'repair_roll' && e.die)) ms += 2600;
+    if (e.type === 'car_gained') ms = Math.max(ms, 0) + 1500;
+    if (e.type === 'lottery' || e.type === 'inspection') ms += 4000;
+  }
+  if (evs && evs.some((e) => e.type === 'car_gained')) ms += 3000;
+  return Math.min(ms, 15000);
+}
 export const RACE_POT = 1000;
 export const MOVE_SECONDS = 30;      // выбор числа шагов
 export const ACT_SECONDS = 60;       // решение: что купить / активировать / гонка
@@ -64,7 +76,7 @@ function shuffle(s, arr) {
 // ---------- создание игры ----------
 export function createGame({ names, goal = 30000, seed = 1, cards, forcedRolls }) {
   if (names.length < 2 || names.length > 6) fail('Игроков должно быть от 2 до 6');
-  if (![30000, 50000, 100000].includes(goal)) fail('Цель: 30000, 50000 или 100000');
+  if (!GOALS.includes(goal)) fail('Цель: 30000, 50000, 100000 или 200000');
   const s = {
     rng: seed >>> 0, goal, turn: 1, current: 0, phase: 'move', winner: null,
     round: 1, loans: [], nextLoanId: 1, loanReq: null, loanReturn: null,

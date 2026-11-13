@@ -20,14 +20,14 @@ const code = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let c; do { c = Array
 const tkey = (s) => s.phase === 'move' ? 'm' + s.turn : s.phase === 'auction' ? 'a' + s.auction.bid + '/' + s.auction.bidder
   : s.phase === 'race_join' ? 'r' + s.turn : s.phase === 'race_roll' ? 'g' + s.turn + '/' + s.race.queue[0] + '/' + s.race.round : s.phase === 'loan' ? 'l' : s.phase === 'swap_offer' ? 'o' + s.turn : 't' + s.turn;
 const secs = (k) => ({ m: E.MOVE_SECONDS, a: E.AUCTION_SECONDS, r: E.RACE_JOIN_SECONDS, g: E.RACE_ROLL_SECONDS, l: E.LOAN_SECONDS, o: E.LOAN_SECONDS }[k[0]] ?? E.ACT_SECONDS);
-function arm(room) {
+function arm(room, pause = 0) {
   const s = room.state;
   if (s.phase === 'over') { room.deadline = 0; return; }
   const k = tkey(s);
   if (k === room.key) return;
   if (k === 'l') room.paused = { key: room.key, left: room.deadline - Date.now() };
   if (room.key === 'l' && room.paused && room.paused.key === k) room.deadline = Date.now() + room.paused.left;
-  else room.deadline = Date.now() + secs(k) * 1000 * SCALE;
+  else room.deadline = Date.now() + (secs(k) * 1000 + pause) * SCALE; // пока все смотрят карты/кубики — отсчёт не идёт
   room.key = k;
 }
 function doTimeout(room) {
@@ -56,7 +56,7 @@ function mask(s) { // клиент не видит порядок колод: т
   return v;
 }
 function payload(room, seat, events, full) {
-  const base = { room: room.code, me: seat, host: 0, players: room.seats.map((x) => x.name), colors: room.seats.map((x) => x.color) };
+  const base = { room: room.code, me: seat, host: 0, players: room.seats.map((x) => x.name), colors: room.seats.map((x) => x.color), goals: room.seats.map((x) => x.goal || null) };
   if (!room.state) return { ...base, phase: 'lobby' };
   return { ...base, phase: 'game', state: mask(room.state), events, deadline: room.deadline, now: Date.now(), key: room.key, catalog: full ? room.state.catalog : undefined };
 }
@@ -65,7 +65,7 @@ function broadcast(room, events = [], full = false) {
   room.touched = Date.now();
   for (const [seat, set] of room.clients) for (const res of set) send(res, payload(room, seat, events, full));
 }
-function changed(room, evs) { arm(room); broadcast(room, evs); }
+function changed(room, evs) { arm(room, E.eventPause(evs)); broadcast(room, evs); }
 
 // ---------- HTTP ----------
 const html = () => { const p = path.join(dir, 'public', 'index.html'); return fs.readFileSync(fs.existsSync(p) ? p : path.join(dir, 'index.html')); };
@@ -119,6 +119,12 @@ const server = http.createServer(async (req, res) => {
     }
     const seat = seatOf(room, b.token);
     if (seat < 0) return json(res, 403, { error: 'Нет доступа' });
+    if (url.pathname === '/api/goal') { // каждый выбирает цель; играем до самой маленькой
+      if (room.state) return json(res, 400, { error: 'Игра уже началась' });
+      if (!E.GOALS.includes(Number(b.goal))) return json(res, 400, { error: 'Неверная цель' });
+      room.seats[seat].goal = Number(b.goal); broadcast(room);
+      return json(res, 200, { ok: true });
+    }
     if (url.pathname === '/api/color') { // выбор человечка в лобби
       if (room.state) return json(res, 400, { error: 'Игра уже началась' });
       if (!PAWNS.includes(b.color)) return json(res, 400, { error: 'Неверный цвет' });
@@ -130,7 +136,7 @@ const server = http.createServer(async (req, res) => {
       if (seat !== 0) return json(res, 403, { error: 'Начать может только создатель комнаты' });
       if (room.state) return json(res, 400, { error: 'Игра уже идёт' });
       if (room.seats.length < 2) return json(res, 400, { error: 'Нужно минимум 2 игрока' });
-      room.state = E.createGame({ names: room.seats.map((x) => x.name), goal: [30000, 50000, 100000].includes(Number(b.goal)) ? Number(b.goal) : 30000, seed: Date.now() % 2147483647, cards: CARDS });
+      room.state = E.createGame({ names: room.seats.map((x) => x.name), goal: room.seats.some((x) => x.goal) ? Math.min(...room.seats.filter((x) => x.goal).map((x) => x.goal)) : (E.GOALS.includes(Number(b.goal)) ? Number(b.goal) : 30000), seed: Date.now() % 2147483647, cards: CARDS });
       arm(room); broadcast(room, [{ type: 'game_start', first: room.state.current }], true);
       return json(res, 200, { ok: true });
     }

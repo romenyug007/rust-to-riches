@@ -18,7 +18,21 @@ input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius
 .mut{color:var(--mut)}.bad{color:var(--bad)}
 .chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;margin:1px 2px 1px 0}
 .d-vedro{background:#ECE8DF;color:#111;border:1px solid #8A867D}.d-bitye{background:#F08A24;color:#111}.d-family{background:#2E7D46;color:#fff}.d-premium{background:#1F5FAE;color:#fff}.d-retro{background:#B3261E;color:#fff}
-#dice{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:50}
+#dice{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.38);z-index:70}
+.d3box{display:flex;flex-direction:column;align-items:center;gap:12px;color:#fff;font:600 22px Rubik,sans-serif;text-align:center}
+.d3area{width:min(92vw,760px);height:min(62vh,440px);position:relative;border-radius:26px;background:#23412F;border:8px solid #3A2A1C;overflow:hidden;touch-action:none;perspective:900px;box-shadow:inset 0 0 60px rgba(0,0,0,.45)}
+.d3pos{position:absolute;left:50%;top:50%;width:110px;height:110px;margin:-55px 0 0 -55px;transform-style:preserve-3d;cursor:grab;touch-action:none}
+.cube{width:110px;height:110px;position:relative;transform-style:preserve-3d;transform:rotateX(-18deg) rotateY(24deg)}
+.cube .f{position:absolute;inset:0;background:#F5F0E6;border:2px solid #CFC6B4;border-radius:18px;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:15px;gap:6px;backface-visibility:hidden;box-shadow:inset 0 0 14px rgba(0,0,0,.18)}
+.cube .f i{border-radius:50%;background:#1E1F22}.cube .f i.o{visibility:hidden}
+.cube .f1{transform:translateZ(55px)}.cube .f6{transform:rotateY(180deg) translateZ(55px)}.cube .f2{transform:rotateY(90deg) translateZ(55px)}.cube .f5{transform:rotateY(-90deg) translateZ(55px)}.cube .f3{transform:rotateX(90deg) translateZ(55px)}.cube .f4{transform:rotateX(-90deg) translateZ(55px)}
+.d3shadow{position:absolute;left:50%;top:50%;width:120px;height:40px;margin:50px 0 0 -60px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(6px)}
+.lcard{width:470px;height:260px;border-radius:16px;overflow:hidden;border:4px solid var(--lc);background:var(--card);display:flex;flex-direction:column;box-shadow:0 12px 30px rgba(0,0,0,.3);animation:fly .8s cubic-bezier(.2,.8,.2,1)}
+.lcard .lb{background:var(--lc);color:#fff;font:400 20px 'Russo One',sans-serif;padding:10px 16px;letter-spacing:.06em}
+.lcard .lt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center}
+.lcard .lt b{font:400 28px 'Russo One',sans-serif}
+.act button.mv{font-size:19px;padding:12px 16px}
+.cell .toks{z-index:2}.cell .toks svg+svg{margin-left:-40px}
 .die{width:120px;height:120px;border-radius:24px;background:#F5F0E6;color:#1E1F22;font:400 64px/120px 'Russo One',sans-serif;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .roll{animation:roll .9s ease-out}@keyframes roll{0%{transform:translateX(-260px) rotate(-720deg)}100%{transform:none}}
 /* ---- игровой экран: фиксированная сцена 1600×900, масштабируется под экран ---- */
@@ -38,7 +52,7 @@ input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius
 .cell.here{outline:4px solid var(--acc);outline-offset:-2px}
 .cell.reach{border-color:#2E7D46;border-width:3px}
 .cell .reach-b{position:absolute;right:6px;top:34px;background:#2E7D46;color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:8px}
-.cell .toks{position:absolute;left:6px;bottom:4px;display:flex;gap:2px}
+.cell .toks{position:absolute;left:2px;bottom:0;display:flex}
 .center{grid-row:2/4;grid-column:2/6;position:relative;background:#D9D1C1;border:2px solid #C6BBA6;border-radius:16px;display:flex;gap:12px;padding:10px;min-height:0}
 .act{width:430px;flex:none;background:var(--card);border-radius:12px;padding:10px 12px;overflow:auto;font-size:14px}
 .act p{margin:6px 0}.act label{font-size:13px}
@@ -111,6 +125,18 @@ const FAMILY_STEP = 0.1, FAMILY_MAX = 3; // Family: +10% за проход кл�
 const round10 = (x) => Math.round(x / 10) * 10;
 const MOVE_COST = [null, 0, 0, 300, 600, 1000, 3000, 10000]; // индекс = число шагов
 const START_CASH = 1500;
+const GOALS = [30000, 50000, 100000, 200000];
+// сколько миллисекунд все смотрят на карты и кубики после хода (в это время таймер стоит)
+function eventPause(evs) {
+  let ms = 0;
+  for (const e of evs || []) {
+    if (['race_roll', 'race_reroll', 'taxi', 'theft_roll'].includes(e.type) || (e.type === 'repair_roll' && e.die)) ms += 2600;
+    if (e.type === 'car_gained') ms = Math.max(ms, 0) + 1500;
+    if (e.type === 'lottery' || e.type === 'inspection') ms += 4000;
+  }
+  if (evs && evs.some((e) => e.type === 'car_gained')) ms += 3000;
+  return Math.min(ms, 15000);
+}
 const RACE_POT = 1000;
 const MOVE_SECONDS = 30;      // выбор числа шагов
 const ACT_SECONDS = 60;       // решение: что купить / активировать / гонка
@@ -159,7 +185,7 @@ function shuffle(s, arr) {
 // ---------- создание игры ----------
 function createGame({ names, goal = 30000, seed = 1, cards, forcedRolls }) {
   if (names.length < 2 || names.length > 6) fail('Игроков должно быть от 2 до 6');
-  if (![30000, 50000, 100000].includes(goal)) fail('Цель: 30000, 50000 или 100000');
+  if (!GOALS.includes(goal)) fail('Цель: 30000, 50000, 100000 или 200000');
   const s = {
     rng: seed >>> 0, goal, turn: 1, current: 0, phase: 'move', winner: null,
     round: 1, loans: [], nextLoanId: 1, loanReq: null, loanReturn: null,
@@ -972,6 +998,8 @@ const PAWN={red:['#D32F2F','#fff','Красный'],blue:['#1F5FAE','#fff','Си
 const PORDER=['red','blue','green','yellow','black','white'];
 const pcol=(i)=>(LOBBY&&LOBBY.colors&&LOBBY.colors[i])||PORDER[i%6];
 // человечек с широким контуром (~20% от фигуры): чёрный — с белым, белый — с чёрным
+function goalPick(){const gs=(LOBBY.goals||[]).filter(Boolean),mine=(LOBBY.goals||[])[ME];const fin=gs.length?Math.min(...gs):30000;
+ return '<p><b>До какой суммы играем?</b> Каждый выбирает, игра идёт до самой маленькой.<br>'+GOALS.map(g=>`<button class="sec" data-goal="${g}" style="${mine===g?'outline:3px solid var(--acc)':''}">${eur(g)}</button>`).join('')+'</p><p>Выбрали: '+LOBBY.players.map((n,i)=>n+' — '+((LOBBY.goals||[])[i]?eur(LOBBY.goals[i]):'не выбрал')).join(', ')+'<br><b>Игра будет до '+eur(fin)+'</b></p>'}
 function picker(){return '<p><b>Выберите человечка:</b><br>'+PORDER.map(c=>{const taken=LOBBY.colors&&LOBBY.colors.some((x,j)=>j!==ME&&x===c);const mine=pcol(ME)===c;return `<button class="sec" data-pc="${c}" ${taken?'disabled':''} style="padding:6px 8px;${mine?'outline:3px solid var(--acc)':''}" title="${PAWN[c][2]}">${pawnC(c,40)}</button>`}).join('')+'</p>'}
 function pawn(i,h){return pawnC(pcol(i),h)}
 function pawnC(col,h){const c=PAWN[col]||PAWN.red,w=Math.round(h*0.62);return `<svg width="${w}" height="${h}" viewBox="0 0 30 48" aria-label="${c[2]} человечек" style="filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))"><g fill="${c[0]}" stroke="${c[1]}" stroke-width="4.5" stroke-linejoin="round"><circle cx="15" cy="10" r="7.5"/><path d="M4 45 L6.5 26 Q8 19.5 15 19.5 Q22 19.5 23.5 26 L26 45 Z"/></g></svg>`}
@@ -983,7 +1011,7 @@ const LOT={win:'Выигрыш в лотерею',buyer:'Нашёл покупа
 const eur=(n)=>Number(n).toLocaleString('ru-RU')+' €';
 let sw={t:-1},ME=-1,ROOM='',TOKEN='',CAT=null,LOBBY=null,es=null,lastGains=[],G=null,logs=[],deadline=0,curKey='',paused=null,toast='',rt=-1,rs=100;
 function tkey(){const s=G;return s.phase==='move'?'m'+s.turn:s.phase==='auction'?'a'+s.auction.bid+'/'+s.auction.bidder:s.phase==='race_join'?'r'+s.turn:s.phase==='loan'?'l':s.phase==='swap_offer'?'o'+s.turn:'t'+s.turn}
-function secs(k){return k[0]==='m'?MOVE_SECONDS:k[0]==='a'?AUCTION_SECONDS:k[0]==='r'?RACE_JOIN_SECONDS:k[0]==='l'||k[0]==='o'?LOAN_SECONDS:ACT_SECONDS}
+function secs(k){return k[0]==='g'?RACE_ROLL_SECONDS:k[0]==='m'?MOVE_SECONDS:k[0]==='a'?AUCTION_SECONDS:k[0]==='r'?RACE_JOIN_SECONDS:k[0]==='l'||k[0]==='o'?LOAN_SECONDS:ACT_SECONDS}
 const TL={g:'Бросок кубика: ',m:'Выбор шагов: ',t:'Решение: ',a:'Аукцион: ',r:'Окно гонки: ',l:'Займ: ',o:'Ответ на обмен: '};
 
 function nm(i){return G.players[i].name}
@@ -1048,7 +1076,9 @@ function onData(d){
  ME=d.me;LOBBY=d;if(d.catalog)CAT=d.catalog;
  if(d.phase==='lobby'){G=null;lobby();return}
  G=Object.assign(d.state,{catalog:CAT});deadline=Date.now()+(d.deadline-d.now);curKey=d.key;
- const ev=d.events||[];ev.forEach(e=>logs.unshift(fmt(e)));const gs=ev.filter(e=>e.type==='car_gained');if(gs.length){lastGains=gs;gainAt=Date.now();setTimeout(()=>{if(G)render()},6100)}
+ const ev=d.events||[];ev.forEach(e=>logs.unshift(fmt(e)));const gs=ev.filter(e=>e.type==='car_gained');if(gs.length){lastGains=gs;gainAt=Date.now()}
+ const cs=ev.filter(e=>e.type==='lottery'||e.type==='inspection');lastCards=cs;
+ const pz=eventPause(ev);holdUntil=Date.now()+pz;if(pz)setTimeout(()=>{if(G)render()},pz+80);
  toast='';render();if(ev.length)showDice(ev)}
 function lobby(msg){document.body.classList.remove('ingame');const app=$('#app');
  if(!TOKEN){const q=(new URLSearchParams(location.search).get('room')||'').toUpperCase();
@@ -1059,11 +1089,12 @@ function lobby(msg){document.body.classList.remove('ingame');const app=$('#app')
  if(!LOBBY){app.innerHTML='<div class="card">Подключаемся…</div>';return}
  const link=location.origin+'/?room='+ROOM;
  app.innerHTML='<div class="card"><p>Комната <b style="font-size:22px">'+ROOM+'</b></p><p>Ссылка для друзей:<br><input readonly value="'+link+'" style="width:100%" onclick="this.select()"></p>'+picker()+'<p><b>Игроки ('+LOBBY.players.length+'/6):</b></p>'+LOBBY.players.map((n,i)=>'<div style="display:flex;align-items:center;gap:8px;margin:4px 0">'+pawn(i,34)+n+(i===0?' (создатель)':'')+(i===ME?' — это вы':'')+'</div>').join('')+
-  (ME===0?'<p>Цель партии: <select id="goal"><option value="30000">30 000 €</option><option value="50000">50 000 €</option><option value="100000">100 000 €</option></select></p><button id="st"'+(LOBBY.players.length<2?' disabled':'')+'>Начать игру</button>':'<p class="mut">Ждём, пока создатель начнёт игру…</p>')+' <button class="sec" id="lv">Выйти</button></div>';
- const st=$('#st');if(st)st.onclick=async()=>{const r=await api('/api/start',{room:ROOM,token:TOKEN,goal:+$('#goal').value});if(r.error)alert(r.error)};
+  goalPick()+(ME===0?'<button id="st"'+(LOBBY.players.length<2?' disabled':'')+'>Начать игру</button>':'<p class="mut">Ждём, пока создатель начнёт игру…</p>')+' <button class="sec" id="lv">Выйти</button></div>';
+ const st=$('#st');if(st)st.onclick=async()=>{const r=await api('/api/start',{room:ROOM,token:TOKEN});if(r.error)alert(r.error)};
+ document.querySelectorAll('[data-goal]').forEach(e=>e.onclick=async()=>{const r=await api('/api/goal',{room:ROOM,token:TOKEN,goal:+e.dataset.goal});if(r.error)alert(r.error)});
  $('#lv').onclick=leave;
  document.querySelectorAll('[data-pc]').forEach(e=>e.onclick=async()=>{const r=await api('/api/color',{room:ROOM,token:TOKEN,color:e.dataset.pc});if(r.error)alert(r.error)})}
-async function act(a){const r=await api('/api/action',{room:ROOM,token:TOKEN,action:a});if(r.error){toast=r.error;render()}}
+async function act(a){const r=await api('/api/action',{room:ROOM,token:TOKEN,action:a});if(r.error){toast=r.error;if(mySwipe&&!diceBusy){mySwipe=null;$('#dice').style.display='none'}render()}}
 const actAs=(p,a)=>act(a);
 
 const val=(c)=>sellPrice(G,c);
@@ -1074,26 +1105,50 @@ function cardPanel(id,d,title){const c=G.catalog[id];
  let x='<div class="mc"><div><b>'+(title||'Открытая карта')+'</b></div><div class="mcard"><span class="chip d-'+c.deck+'">'+DN[c.deck]+'</span> <b>'+c.name+'</b><br>'+(c.buy!=null?'Покупка '+eur(c.buy)+' · ':'Только аукцион · ')+'старт '+eur(c.auction_start)+'<br>Продажа '+eur(c.sell)+'<br>'+rep(c)+'</div>';
  if(d)x+='<div class="mcard dcard"><b>Дефект: '+d.name+'</b><br>'+(d.cost?'Ремонт '+eur(d.cost):(d.text||'не ремонтируется'))+'</div>';
  return x+'</div>'}
-function showDice(evs){const L=[];evs.forEach(e=>{if(e.type==='race_roll')L.push([nm(e.player)+(e.tie?' (перебросок)':''),e.die]);else if(e.type==='theft_roll')L.push([nm(e.player)+' · Угон',e.die]);else if(e.type==='race_reroll')L.push([nm(e.player)+' (переброс)',e.die]);else if(e.type==='taxi')L.push([nm(e.player)+' · такси',e.die]);else if(e.type==='repair_roll'&&e.die)L.push(['Куб ремонта Crash',e.die])});
- const el=$('#dice');let i=0;(function step(){if(i>=L.length){el.style.display='none';return}const w=L[i][0],v=L[i][1];i++;el.style.display='flex';el.innerHTML='<div style="text-align:center;color:#fff"><div style="margin-bottom:10px;font-size:18px">'+w+'</div><div class="die roll">?</div></div>';const d=el.querySelector('.die');let k=0;const iv=setInterval(()=>{d.textContent=1+Math.floor(Math.random()*6);if(++k>9){clearInterval(iv);d.textContent=v}},60);setTimeout(step,1700)})()}
-
+const PIPS={1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+const FROT={1:[0,0],2:[0,-90],3:[-90,0],4:[90,0],5:[0,90],6:[0,180]};
+const cubeHTML=()=>'<div class="cube" id="cube">'+[1,2,3,4,5,6].map(n=>'<div class="f f'+n+'">'+[0,1,2,3,4,5,6,7,8].map(k=>'<i class="'+(PIPS[n].includes(k)?'':'o')+'"></i>').join('')+'</div>').join('')+'</div>';
+let diceArm=null,mySwipe=null,diceQ=[],diceBusy=false;
+function diceBox(label,inner){const el=$('#dice');el.style.display='flex';el.innerHTML='<div class="d3box"><div id="d3l">'+label+'</div><div class="d3area" id="d3a"><div class="d3shadow" id="d3s"></div><div class="d3pos" id="d3p">'+cubeHTML()+'</div></div>'+(inner||'')+'</div>';}
+function armDice(a){diceArm=a;diceBox('Смахни кубик в любую сторону — он покатится','<button class="sec" id="d3x" style="font-size:20px">Отмена</button>');
+ const p=$('#d3p');let st=null,tr=[];
+ p.onpointerdown=(e)=>{st={x:e.clientX,y:e.clientY};tr=[[e.clientX,e.clientY,performance.now()]];p.setPointerCapture(e.pointerId)};
+ p.onpointermove=(e)=>{if(!st)return;tr.push([e.clientX,e.clientY,performance.now()]);if(tr.length>6)tr.shift();p.style.transform=`translate(${e.clientX-st.x}px,${e.clientY-st.y}px)`};
+ const go=(e)=>{if(!st||!diceArm)return;const a0=tr[0],a1=[e.clientX,e.clientY,performance.now()];const dt=Math.max(16,a1[2]-a0[2]);let vx=(a1[0]-a0[0])/dt,vy=(a1[1]-a0[1])/dt;if(Math.hypot(vx,vy)<.2){const t=Math.random()*6.28;vx=Math.cos(t);vy=Math.sin(t)}
+  mySwipe={vx,vy,x:e.clientX-st.x,y:e.clientY-st.y};st=null;const a=diceArm;diceArm=null;$('#d3l').textContent='Бросок…';act(a)};
+ p.onpointerup=go;p.onpointercancel=go;
+ $('#d3x').onclick=()=>{diceArm=null;mySwipe=null;$('#dice').style.display='none'}}
+function rollOne(label,value,vec,done){diceBox(label);const area=$('#d3a'),p=$('#d3p'),c=$('#cube'),sh=$('#d3s');
+ const W=area.clientWidth/2-70,H=area.clientHeight/2-70,sp=Math.hypot(vec.vx,vec.vy)||1,dist=Math.min(Math.max(sp*260,140),Math.hypot(W,H));
+ let tx=vec.vx/sp*dist,ty=vec.vy/sp*dist;if(Math.abs(tx)>W){ty*=W/Math.abs(tx);tx=Math.sign(tx)*W}if(Math.abs(ty)>H){tx*=H/Math.abs(ty);ty=Math.sign(ty)*H}
+ const sx=vec.x||0,sy=vec.y||0;p.style.transition='none';p.style.transform=`translate(${sx}px,${sy}px)`;sh.style.transition='none';sh.style.transform=`translate(${sx}px,${sy}px)`;
+ c.style.transition='none';c.style.transform='rotateX(-18deg) rotateY(24deg)';void c.offsetWidth;
+ const f=FROT[value],nx=3+Math.floor(Math.random()*2),ny=2+Math.floor(Math.random()*2);
+ const rx=f[0]-14+360*nx*(ty>=0?-1:1),ry=f[1]+18+360*ny*(tx>=0?1:-1);
+ p.style.transition='transform 1.6s cubic-bezier(.12,.7,.22,1)';sh.style.transition='transform 1.6s cubic-bezier(.12,.7,.22,1)';c.style.transition='transform 1.6s cubic-bezier(.12,.7,.22,1)';
+ requestAnimationFrame(()=>{p.style.transform=`translate(${tx}px,${ty}px)`;sh.style.transform=`translate(${tx}px,${ty}px)`;c.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`});
+ setTimeout(()=>{$('#d3l').innerHTML=label+' — <b style="font-size:30px">'+value+'</b>'},1650);setTimeout(done,2450)}
+function showDice(evs){const L=[];evs.forEach(e=>{if(e.type==='race_roll')L.push([nm(e.player)+(e.tie?' (перебросок)':''),e.die,e.player]);else if(e.type==='theft_roll')L.push([nm(e.player)+' · Угон',e.die,e.player]);else if(e.type==='race_reroll')L.push([nm(e.player)+' (переброс)',e.die,e.player]);else if(e.type==='taxi')L.push([nm(e.player)+' · такси',e.die,e.player]);else if(e.type==='repair_roll'&&e.die)L.push(['Кубик ремонта Crash · '+nm(e.player),e.die,e.player])});
+ if(!L.length){if(!diceBusy&&!diceArm&&mySwipe){mySwipe=null;$('#dice').style.display='none'}return}
+ L.forEach(x=>{let v=null;if(x[2]===ME&&mySwipe){v=mySwipe;mySwipe=null}if(!v){const t=Math.random()*6.28;v={vx:Math.cos(t)*1.4,vy:Math.sin(t)*1.4}}diceQ.push([x[0],x[1],v])});
+ if(diceBusy)return;diceBusy=true;(function step(){const x=diceQ.shift();if(!x){diceBusy=false;$('#dice').style.display='none';return}rollOne(x[0],x[1],x[2],step)})()}
 function controls(){
 const s=G,p=s.players[ME],acts=legalActions(s),h=[];const has=(t)=>acts.filter(a=>a.type===t);
 if(['move','act'].includes(s.phase))p.cars.filter(c=>c.defect&&['unrepairable','buyer'].includes(c.defect.kind)).forEach(c=>h.push(`<button class="sec" data-a='{"type":"sell_now","carIds":["${c.id}"]}'>Продать сейчас: ${cn(c.id)} → ${eur(c.defect.kind==='buyer'?s.catalog[c.id].sell:s.catalog[c.id].auction_start)}</button>`));
-if(s.phase==='move')has('move').forEach(a=>h.push(`<button data-a='${JSON.stringify({type:'move',steps:a.steps})}'>${a.steps} ${a.steps==1?'шаг':'шага'} · ${a.cost?eur(a.cost):'бесплатно'}</button>`));
+if(s.phase==='move')has('move').forEach(a=>h.push(`<button class="mv" data-a='${JSON.stringify({type:'move',steps:a.steps})}'>${a.steps} ${a.steps==1?'шаг':'шага'} · ${a.cost?eur(a.cost):'бесплатно'}</button>`));
 if(s.phase==='act'){
  acts.forEach(a=>{const j=(o)=>JSON.stringify(o).replace(/'/g,'&#39;');
   if(a.type==='buy_start')h.push(`<button data-a='${j({type:'buy_start',deck:a.deck})}'>Купить${a.deck?' из «'+DN[a.deck]+'»':''}</button>`);
-  if(a.type==='autoservice')h.push(`<button data-a='${j({type:'autoservice'})}'>Ремонт</button>`);
+  if(a.type==='autoservice'){const roll=p.cars.some(c=>!c.repaired&&!c.defect&&s.catalog[c.id].deck==='bitye');h.push(`<button ${roll?'data-dice':'data-a'}='${j({type:'autoservice'})}'>Ремонт${roll?' (кубик для Crash)':''}</button>`)}
   if(a.type==='sell'){const one=!!a.perekup;h.push('<p>'+(one?'Перекуп: выберите <b>одну</b> машину.':'Дилер: отметьте машины для продажи.')+' Неотремонтированные — за 50%.</p>');a.carIds.forEach(id=>{const c=p.cars.find(x=>x.id===id);h.push(`<label style="display:block"><input type="${one?'radio':'checkbox'}" name="sc" class="sc" value="${id}" data-v="${a.quotes[id]}"> ${chip(id)}${c.fam?' +'+c.fam*10+'%':''}${c.repaired||c.sellAsRepaired?' ✓':' <span class="bad">(не отремонтирована, −50%)</span>'} → <b>${eur(a.quotes[id])}</b></label>`)});h.push('<p>Итого: <b id="st">0 €</b></p><button data-sell="1">Продать выбранные</button>')}
   if(a.type==='inspection')h.push(`<button data-a='${j({type:'inspection'})}'>Пройти техосмотр (${eur(a.cost)})</button>`);
   if(a.type==='lottery')h.push(`<button data-a='${j({type:'lottery'})}'>Тянуть карту Лотереи</button>`);
   if(a.type==='bank')h.push(`<button data-a='${j({type:'bank'})}'>Получить в Банке +${eur(a.gain)}</button>`);
-  if(a.type==='theft')h.push(`<button data-a='${j({type:'theft'})}'>Угон: бросить кубик</button>`);
+  if(a.type==='theft')h.push(`<button data-dice='${j({type:'theft'})}'>Угон: бросить кубик</button>`);
   if(a.type==='rent'){const rc=p.cars.filter(c=>c.repaired);h.push(`<button data-a='${j({type:'rent'})}'>Сдать в прокат: +${eur(rc.reduce((t,c)=>t+RENT[s.catalog[c.id].deck],0))}</button><div class="mut" style="font-size:.8em">${rc.map(c=>cn(c.id)+' ('+DN[s.catalog[c.id].deck]+') '+eur(RENT[s.catalog[c.id].deck])).join(' · ')}</div>`)}
   if(a.type==='race_start')h.push(`<button data-a='${j({type:'race_start'})}'>Начать гонку</button>`);
   if(a.type==='swap_pay')Object.keys(s.decks).filter(d=>s.decks[d].length).forEach(d=>h.push(`<button class="sec" data-a='${j({type:'swap_pay',carId:a.carId,deck:d})}'>Обмен «${cn(a.carId)}» → ${DN[d]}</button>`));
-  if(a.type==='taxi'){const dk=s.catalog[a.carId].deck;h.push(`<button class="sec" data-a='${j({type:'taxi',carId:a.carId})}'>Такси: ${cn(a.carId)} · ${DN[dk]} · ${TAXI[dk]} € × кубик</button>`)}
+  if(a.type==='taxi'){const dk=s.catalog[a.carId].deck;h.push(`<button class="sec" data-dice='${j({type:'taxi',carId:a.carId})}'>Такси: ${cn(a.carId)} · ${DN[dk]} · ${TAXI[dk]} € × кубик</button>`)}
   if(a.type==='pass')h.push(`<button class="sec" data-a='{"type":"pass"}'>Пропустить</button>`)})}
 if(s.phase==='buy'){const c=s.catalog[s.pending.cardId];
  h.push(`<p><b>${c.name}</b> · ${DN[c.deck]} · продажа ${eur(c.sell)}${c.buy!=null?' · покупка '+eur(c.buy):''} · старт аукциона ${eur(c.auction_start)}</p>`);
@@ -1119,7 +1174,7 @@ if(s.phase==='theft_pick'){h.push('<p>Угон удался! Выберите м
 if(s.phase==='lot_swap'){const others=s.players.filter(q=>q.id!==p.id&&!q.eliminated&&q.cars.length);if(!others.some(q=>q.id===sw.t))sw.t=others[0].id;const T=s.players[sw.t];
  h.push(`<p>Обмен: машины оцениваются как цена − ремонт, разницу доплачивает владелец более дешёвой.</p><p>Моя: <select id="sw1">${p.cars.map(c=>`<option value="${c.id}">${cn(c.id)} (${eur(carValue(s,c))})</option>`).join('')}</select> ⇄ игрок <select id="swt">${others.map(q=>`<option value="${q.id}" ${q.id===sw.t?'selected':''}>${q.name}</option>`).join('')}</select> машина <select id="sw2">${T.cars.map(c=>`<option value="${c.id}">${cn(c.id)} (${eur(carValue(s,c))})</option>`).join('')}</select></p><button data-swp="1">Предложить обмен</button><button class="sec" data-a='{"type":"lot_skip"}'>Не меняться</button>`)}
 if(s.phase==='swap_offer'){const O=s.swapOffer;h.push(`<p><b>${nm(O.from)}</b> предлагает обмен: его «${cn(O.give)}» на вашу «${cn(O.take)}»${O.payer!=null?`. Доплата ${eur(O.diff)} — платит ${O.payer===ME?'вы':nm(O.payer)}`:''}.</p><button data-a='{"type":"swap_accept"}'>Согласиться</button><button class="sec" data-a='{"type":"swap_decline"}'>Отказаться</button>`)}
-if(s.phase==='race_roll')h.push('<p>Ваш бросок в гонке (15 с, иначе кубик бросится сам).</p><button data-a=\'{"type":"race_roll"}\'>Бросить кубик</button>');
+if(s.phase==='race_roll')h.push('<p>Ваш бросок в гонке (15 с, иначе кубик бросится сам).</p><button data-dice=\'{"type":"race_roll"}\'>Бросить кубик</button>');
 if(s.phase==='race_reroll')h.push(`<p>Организатор может перебросить куб (максимум из двух).</p><button data-a='{"type":"race_reroll"}'>Перебросить</button><button class="sec" data-a='{"type":"race_keep"}'>Оставить</button>`);
 return h.join('')}
 
@@ -1180,18 +1235,25 @@ function defInfo(c){const k=G.catalog[c.id];
  if(c.defect){if(c.defect.kind==='unrepairable')return [c.defect.name,'не ремонтируется · аукцион '+eur(k.auction_start)];if(c.defect.kind==='buyer')return [c.defect.name,'продаётся как целая'];if(c.defect.kind==='swap_pay')return [c.defect.name,''];return [(c.hidden?'Скрытый: ':'')+c.defect.name,'ремонт '+eur(c.defect.repair.cost)]}
  if(k.deck==='bitye')return ['Восстановление','кубик: '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')];
  if(k.deck==='retro')return ['Реставрация','ремонт '+eur(k.repair.cost)];return ['Ремонт','']}
-let infoK=null,gainAt=0,modalOff='';
+// ---- иллюстрации клеток: гонка, перекуп (площадка с машинами), дилер (автосалон) ----
+const mini=(deck,x,y,sc,col)=>`<g transform="translate(${x} ${y}) scale(${sc})">${(CARS[deck]||CARS.premium).replace(/fill="#(1F5FAE|F4F2EC|F08A24|B3261E)"/,'fill="'+(col||'#$1')+'"')}</g>`;
+const ILL={
+gonka_reroll:()=>`<svg width="220" height="104" viewBox="0 0 220 104" aria-hidden="true"><rect x="0" y="40" width="220" height="56" fill="#3A3B40"/><path d="M0 68 H220" stroke="#F5F0E6" stroke-width="2.5" stroke-dasharray="14 10"/><g fill="#F5F0E6"><rect x="186" y="40" width="7" height="7"/><rect x="193" y="47" width="7" height="7"/><rect x="186" y="54" width="7" height="7"/><rect x="193" y="61" width="7" height="7"/><rect x="186" y="68" width="7" height="7"/><rect x="193" y="75" width="7" height="7"/><rect x="186" y="82" width="7" height="7"/><rect x="193" y="89" width="7" height="7"/></g><g fill="#B9B5AC"><circle cx="18" cy="58" r="9" opacity=".35"/><circle cx="36" cy="54" r="11" opacity=".45"/><circle cx="56" cy="57" r="8" opacity=".6"/><circle cx="26" cy="82" r="10" opacity=".35"/><circle cx="46" cy="79" r="12" opacity=".45"/><circle cx="68" cy="83" r="8" opacity=".6"/></g>${mini('premium',66,28,.82,'#D32F2F')}${mini('premium',86,56,.82,'#1F5FAE')}</svg>`,
+perekup:()=>`<svg width="220" height="104" viewBox="0 0 220 104" aria-hidden="true"><rect x="4" y="8" width="212" height="92" rx="8" fill="#3A3B40"/><path d="M12 54 H208" stroke="#E2B84A" stroke-width="2"/><path d="M76 12 V50 M146 12 V50 M110 58 V96" stroke="#E2B84A" stroke-width="2"/>${mini('vedro',8,18,.52)}${mini('bitye',80,18,.52)}${mini('retro',150,18,.52)}${mini('premium',40,60,.55)}${mini('vedro',118,60,.55,'#5E8C61')}<g font-family="Rubik,sans-serif" font-size="11" font-weight="700"><rect x="24" y="12" width="22" height="13" rx="3" fill="#F2C14E"/><text x="29" y="22" fill="#1E1F22">€</text><rect x="96" y="12" width="22" height="13" rx="3" fill="#F2C14E"/><text x="101" y="22" fill="#1E1F22">€</text><rect x="166" y="12" width="22" height="13" rx="3" fill="#F2C14E"/><text x="171" y="22" fill="#1E1F22">€</text><rect x="58" y="56" width="22" height="13" rx="3" fill="#F2C14E"/><text x="63" y="66" fill="#1E1F22">€</text><rect x="136" y="56" width="22" height="13" rx="3" fill="#F2C14E"/><text x="141" y="66" fill="#1E1F22">€</text></g></svg>`,
+dealer:()=>`<svg width="220" height="104" viewBox="0 0 220 104" aria-hidden="true"><rect x="10" y="10" width="200" height="16" rx="4" fill="#E0662F"/><rect x="14" y="26" width="192" height="72" fill="#E9EEF2"/><rect x="22" y="32" width="176" height="60" rx="3" fill="#9FC4D9"/><path d="M40 32 L20 92 M90 32 L70 92 M150 32 L130 92" stroke="#fff" stroke-width="6" opacity=".35"/><path d="M80 32 V92 M140 32 V92" stroke="#E9EEF2" stroke-width="3"/>${mini('premium',58,48,.85,'#B3261E')}<rect x="14" y="92" width="192" height="6" fill="#C6BBA6"/><path d="M4 98 V40 M216 98 V40" stroke="#B9B5AC" stroke-width="2"/><path d="M4 40 L16 44 L4 48 Z" fill="#1F5FAE"/><path d="M216 40 L204 44 L216 48 Z" fill="#2E7D46"/></svg>`};
+let infoK=null,gainAt=0,modalOff='',holdUntil=0,lastCards=[];
+const holding=()=>Date.now()<holdUntil;
 function scale(){const st=$('#stage');if(!st)return;const k=Math.min(innerWidth/1600,innerHeight/900);st.style.transform=`translate(-50%,-50%) scale(${k})`}
 addEventListener('resize',scale);
 function showInfo(i){const el=$('#info');if(!el)return;if(i==null){el.style.display='none';return}const k=BOARD[i],c=DC[k]||SPECIAL[k]||['#26272C','#fff'];
  el.style.borderColor=DARK[k]?'#E0662F':(DC[k]?DC[k][2]:c[0]);el.innerHTML=`<div class="ih" style="background:${DARK[k]?'#E0662F':c[0]};color:${DARK[k]?'#1E1F22':c[1]}">${CN[k]}</div><div class="ib">${CDL[k]}</div>`;el.style.display='block'}
 function cellHTML(i,s,reach){const k=BOARD[i],g=GRID[i],me=s.players[ME];let band,bandFg,cls='cell',body='';
  if(DC[k]){band=DC[k][0];bandFg=DC[k][1];cls+=' deck';body=W2(118,55,'0 0 120 56',CARS[k]||'')}
- else if(DARK[k]){band='#E0662F';bandFg='#1E1F22';cls+=' dark';body=icon(k,'#E0662F',46)}
+ else if(DARK[k]){band='#E0662F';bandFg='#1E1F22';cls+=' dark';body=ILL[k]?ILL[k]():icon(k,'#E0662F',46)}
  else{const c=SPECIAL[k]||['#3A3B40','#fff'];band=c[0];bandFg=c[1];body=icon(k,k==='lottery'?'#7A4FB5':k==='bank'?'#7A5C14':'#3A3B40',46)}
  if(k==='family')body=W2(130,52,'0 0 160 64',famInner(5));if(k==='lottery')cls+=' deck';
  if(s.players[s.current].pos===i)cls+=' here';const r=reach[i];if(r)cls+=' reach';
- const toks=s.players.filter(q=>q.pos===i&&!q.eliminated).map(q=>pawn(q.id,66)).join('');
+ const toks=s.players.filter(q=>q.pos===i&&!q.eliminated).map(q=>pawn(q.id,124)).join('');
  return `<button type="button" class="${cls}" data-cell="${i}" style="grid-row:${g[0]};grid-column:${g[1]};--dc:${DC[k]?DC[k][2]:'#7A4FB5'}"><span class="band" style="background:${band};color:${bandFg}">${CN[k].toUpperCase()}</span><span class="body">${body}<span class="short">${CD[k]}</span></span>${r?`<span class="reach-b">${r.steps} ${r.steps==1?'шаг':'шага'}${r.cost?' · '+eur(r.cost):''}</span>`:''}<span class="toks">${toks}</span></button>`}
 function pairHTML(c){const k=G.catalog[c.id],d=DC[k.deck],di=defInfo(c);
  return `<div class="pair" title="${k.name}"><div class="cc" style="--dc:${d[2]};--df:${d[1]}"><div class="b" style="background:${d[0]}">${DN[k.deck].toUpperCase()}</div><div class="im">${carSVG(c.id,96)}</div><div class="pr">${k.name} · ${eur(shownPrice(c))}${c.fam?' <span style="color:#2E7D46">+'+c.fam*10+'%</span>':''}</div>${di?'<div class="tint"></div>':''}</div>`+
@@ -1202,7 +1264,11 @@ function bigCard(id,title){const k=G.catalog[id],d=DC[k.deck],scn={vedro:'#C9D6D
 function overlay(s){
  if(s.phase==='buy'&&s.pending)return `<div class="ov">${bigCard(s.pending.cardId,'ОТКРЫТАЯ КАРТА')}<div class="mut">${CN[BOARD[s.players[s.current].pos]]}: решение — в панели слева</div></div>`;
  if(s.phase==='auction'&&s.auction)return `<div class="ov">${bigCard(s.auction.cardId,'АУКЦИОН')}<div style="font:400 24px 'Russo One'">Ставка: ${eur(s.auction.bid)} · ${nm(s.auction.bidder)}</div></div>`;
- if(lastGains.length&&Date.now()-gainAt<6000){const g=lastGains[lastGains.length-1],k=G.catalog[g.cardId];
+ if(holding()&&lastCards.length){const e=lastCards[lastCards.length-1];
+  if(e.type==='lottery')return `<div class="ov"><div class="lcard" style="--lc:#7A4FB5"><div class="lb">ЛОТЕРЕЯ · ${nm(e.player).toUpperCase()}</div><div class="lt"><b>${LOT[e.card]}</b><div style="font-size:17px">${fmt(e)}</div></div></div></div>`;
+  const t=e.card==='repair_bonus'?'−10% на ремонт':e.card==='sale_bonus'?'+10% к продаже':'Скрытый дефект · '+DN[e.deck];
+  return `<div class="ov"><div class="lcard" style="--lc:#3A3B40"><div class="lb">ТЕХОСМОТР · ${nm(e.player).toUpperCase()}</div><div class="lt"><b>${t}</b><div style="font-size:17px">${fmt(e)}</div></div></div></div>`}
+ if(lastGains.length&&holding()&&Date.now()-gainAt<15000){const g=lastGains[lastGains.length-1],k=G.catalog[g.cardId];
   const def=g.defect?`<div class="bigdef"><div class="b">ДЕФЕКТ</div><div class="t"><b style="font-size:17px">${g.defect}</b>${g.defectCost?'Ремонт '+eur(g.defectCost):(g.defectText||'')}</div></div>`:k.deck==='bitye'?`<div class="bigdef"><div class="b">ВОССТАНОВЛЕНИЕ</div><div class="t">Цену решит кубик в Автосервисе:<br><b>${[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')}</b></div></div>`:'';
   return `<div class="ov"><div style="display:flex;gap:16px;align-items:center">${bigCard(g.cardId,'ПОЛУЧЕНО: '+nm(g.player).toUpperCase())}${def}</div></div>`}
  return ''}
@@ -1211,7 +1277,7 @@ if(!G)return lobby();
 document.body.classList.add('ingame');
 const s=G,me=s.players[ME]||s.players[0],cur=s.players[actor(s)]||s.players[s.current];
 const reach={};
-if(s.phase==='move'&&actor(s)===ME)for(let n=1;n<=7;n++){try{const to=destination(s,me,n);if(me.cash>=MOVE_COST[n]&&!reach[to])reach[to]={steps:n,cost:MOVE_COST[n]}}catch(e){}}
+
 let cells='';for(let i=0;i<BOARD.length;i++)cells+=cellHTML(i,s,reach);
 // гараж: сначала столбики машин с дефектами, потом целые
 const broken=me.cars.filter(c=>!c.repaired),okc=me.cars.filter(c=>c.repaired);
@@ -1225,8 +1291,9 @@ else{const li=loanInfo(s,ME);let loan='';
   li.repayable.forEach(r=>{if(r.roundsLeft===0)loan+='<div class="bad"><b>⚠ Срочно верните долг '+nm(r.lender)+': '+eur(r.due)+'.</b></div>';loan+=`<button class="sec" data-rep-loan="${r.loanId}">Вернуть ${nm(r.lender)}: ${eur(r.due)}</button>`})}
  const mine=(['auction','race_join'].includes(s.phase)||actor(s)===ME);
  const ctl=(s.phase==='loan'?'':(mine?controls():''))+loan;
- const turnLine=`<div class="turn">Ходит: ${pawn(cur.id,26)} ${cur.name}${s.phase==='move'&&actor(s)===ME?' — <span style="color:#2E7D46">нажмите на зелёную клетку или кнопку</span>':''}</div>${toast?`<div class="bad">${toast}</div>`:''}`;
- if(s.phase!=='move'&&ctl.includes('<button')){ // после выбора клетки — действия крупно, на 80% экрана
+ const turnLine=`<div class="turn">Ходит: ${pawn(cur.id,26)} ${cur.name}${s.phase==='move'&&actor(s)===ME?' — <span style="color:#2E7D46">выберите, на сколько шагов идти</span>':''}</div>${toast?`<div class="bad">${toast}</div>`:''}`;
+ if(holding()&&ctl.includes('<button')){top=turnLine+'<p class="mut">Все смотрят, что выпало… Таймер стоит.</p>'}
+ else if(s.phase!=='move'&&ctl.includes('<button')){ // после выбора клетки — действия крупно, на 80% экрана
   const card=(s.phase==='buy'&&s.pending)?bigCard(s.pending.cardId,'ОТКРЫТАЯ КАРТА'):(s.phase==='auction'&&s.auction)?bigCard(s.auction.cardId,'АУКЦИОН · СТАВКА '+eur(s.auction.bid)+' · '+nm(s.auction.bidder).toUpperCase()):'';
   if(modalOff!==curKey)modalHTML=`<div class="mback"></div><div class="modal"><div class="mh"><span>${CN[BOARD[s.players[s.current].pos]]||''} · ${actor(s)===ME?'ваш ход':cur.name}</span><button class="sec" id="mclose">Посмотреть поле</button></div>${toast?`<div class="bad">${toast}</div>`:''}${card}${ctl}</div>`;
   else modalHTML=`<button class="reopen" id="mopen">Открыть действия</button>`;
@@ -1242,9 +1309,10 @@ $('#app').innerHTML=`<div class="vp"><div id="stage">
 scale();
 document.querySelectorAll('[data-cell]').forEach(e=>{const i=+e.dataset.cell;
  e.onmouseenter=()=>{infoK=i;showInfo(i)};e.onmouseleave=()=>{infoK=null;showInfo(null)};
- e.onclick=()=>{if(reach[i])act({type:'move',steps:reach[i].steps});else{infoK=infoK===i?null:i;showInfo(infoK)}};
+ e.onclick=()=>{infoK=infoK===i?null:i;showInfo(infoK)};
  e.ondblclick=()=>showInfo(i)});
 document.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>act(JSON.parse(e.dataset.a)));
+document.querySelectorAll('[data-dice]').forEach(e=>e.onclick=()=>armDice(JSON.parse(e.dataset.dice)));
 const q=(sel,f)=>{const e=document.querySelector(sel);if(e)e.onclick=f};
 q('[data-auc]',()=>act({type:'auction_start',amount:+$('#amt').value}));
 q('[data-bid]',()=>act({type:'bid',amount:+$('#amt').value}));
@@ -1263,6 +1331,6 @@ q('[data-sell]',()=>act({type:'sell',carIds:[...document.querySelectorAll('.sc:c
 q('#again',leave);
 q('#mclose',()=>{modalOff=curKey;render()});q('#mopen',()=>{modalOff='';render()})}
 
-setInterval(()=>{if(!G||G.phase==='over')return;const t=$('#tm');if(t)t.textContent=Math.max(0,Math.ceil((deadline-Date.now())/1000))+' с'},250);
+setInterval(()=>{if(!G||G.phase==='over')return;const t=$('#tm');if(t)t.textContent=Math.max(0,Math.min(secs(curKey),Math.ceil((deadline-Date.now())/1000)))+' с'},250);
 boot();
 </script></body></html>
