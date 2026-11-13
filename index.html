@@ -2,40 +2,86 @@
 <html lang="ru"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Rust to Riches</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Russo+One&family=Rubik:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#f4f1e8;--fg:#1c1b19;--card:#fff;--mut:#6b6659;--acc:#e0a800;--line:#d9d3c3;--bad:#b3261e;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16161a;--fg:#eceae4;--card:#222228;--mut:#9a968b;--line:#34343c;--bad:#ff8a80;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#16161a;--fg:#eceae4;--card:#222228;--mut:#9a968b;--line:#34343c;--bad:#ff8a80;color-scheme:dark}
-html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 system-ui,sans-serif}
-main{max-width:980px;margin:0 auto;padding:10px}
-h1{font-size:20px;margin:6px 0}
-.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0}
-button{font:inherit;background:var(--acc);color:#1c1b19;border:0;border-radius:8px;padding:8px 12px;margin:3px 4px 3px 0;cursor:pointer}
-button.sec{background:var(--line);color:var(--fg)}
-input,select{font:inherit;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);max-width:100%}
-.board{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(4,minmax(64px,1fr));gap:4px}
-.cell{border:1px solid var(--line);border-radius:8px;padding:4px;font-size:12px;background:var(--card);display:flex;flex-direction:column;justify-content:space-between;min-width:0}
-.cell.now{outline:3px solid var(--acc)}
-.mid{grid-row:2/4;grid-column:2/6;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:13px;color:var(--mut)}
-.tok{display:inline-block;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;text-align:center;line-height:20px;margin-right:2px}
-.row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 300px;min-width:0}
+:root{--bg:#E7E1D3;--fg:#1E1F22;--card:#FBF8F1;--mut:#5E5A52;--acc:#E0662F;--line:#CFC6B4;--bad:#B3261E;--ok:#2E7D46;color-scheme:light}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.4 Rubik,system-ui,sans-serif}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font:400 26px 'Russo One',sans-serif;margin:8px 0;color:var(--acc)}h1 span{font:13px Rubik,sans-serif;color:var(--mut)}
+body.ingame main>h1{display:none}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin:8px 0}
+button{font:inherit;font-weight:600;background:var(--acc);color:#1E1F22;border:0;border-radius:9px;padding:8px 12px;margin:3px 4px 3px 0;cursor:pointer}
+button.sec{background:#DDD5C4;color:var(--fg)}button:disabled{opacity:.5}
+input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--fg);max-width:100%}
+.tok{display:inline-block;width:22px;height:22px;border-radius:50%;color:#fff;font-size:12px;font-weight:700;text-align:center;line-height:22px;margin-right:3px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.4)}
 .mut{color:var(--mut)}.bad{color:var(--bad)}
-.log{max-height:180px;overflow:auto;font-size:13px}
-.timer{font-weight:700;font-size:18px}
-.wide{overflow-x:auto}
-.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;margin:1px 2px 1px 0}
-.d-vedro{background:#fff;color:#111;border:1px solid #888}.d-bitye{background:#f08a24;color:#111}.d-family{background:#2a8a3e;color:#fff}.d-premium{background:#2a62c9;color:#fff}.d-retro{background:#c62828;color:#fff}
-.cell.c-vedro{border-top:5px solid #bbb}.cell.c-bitye{border-top:5px solid #f08a24}.cell.c-family{border-top:5px solid #2a8a3e}.cell.c-premium{border-top:5px solid #2a62c9}.cell.c-retro{border-top:5px solid #c62828}.cell.c-sp{border-top:5px solid var(--acc)}
-main{max-width:1280px}
-#dice{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:9}
-.die{width:110px;height:110px;border-radius:18px;background:#fff;color:#111;font:700 56px/110px system-ui;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
-.roll{animation:roll .9s ease-out}@keyframes roll{0%{transform:translateX(-180px) rotate(-540deg)}100%{transform:none}}
-.mid{overflow:auto;padding:4px;gap:3px}.mid .timer{font-size:20px;color:var(--fg)}
-.mc{display:flex;flex-direction:column;gap:3px;width:100%}.mcard{border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--card);color:var(--fg);text-align:left;font-size:12px}.dcard{border-color:var(--bad)}
-.board{grid-template-rows:repeat(4,minmax(88px,1fr))}
+.chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;font-weight:600;margin:1px 2px 1px 0}
+.d-vedro{background:#ECE8DF;color:#111;border:1px solid #8A867D}.d-bitye{background:#F08A24;color:#111}.d-family{background:#2E7D46;color:#fff}.d-premium{background:#1F5FAE;color:#fff}.d-retro{background:#B3261E;color:#fff}
+#dice{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.45);z-index:50}
+.die{width:120px;height:120px;border-radius:24px;background:#F5F0E6;color:#1E1F22;font:400 64px/120px 'Russo One',sans-serif;text-align:center;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.roll{animation:roll .9s ease-out}@keyframes roll{0%{transform:translateX(-260px) rotate(-720deg)}100%{transform:none}}
+/* ---- игровой экран: фиксированная сцена 1600×900, масштабируется под экран ---- */
+.vp{position:fixed;inset:0;overflow:hidden;background:var(--bg)}
+#stage{position:absolute;left:50%;top:50%;width:1600px;height:900px;transform-origin:center center}
+.hdr{position:absolute;left:24px;right:24px;top:10px;height:56px;display:flex;align-items:center;justify-content:space-between}
+.ttl{font:400 34px/1 'Russo One',sans-serif;color:var(--acc);letter-spacing:.03em}.sub{font-size:14px;color:var(--mut);letter-spacing:.05em}
+.pill{height:44px;padding:0 14px;border-radius:12px;background:#2C2D33;color:#fff;display:inline-flex;align-items:center;gap:8px;margin-left:8px}
+.pill small{font-size:11px;color:#B9B5AC;letter-spacing:.1em}.pill b{font:400 20px 'Russo One',sans-serif}
+.board{position:absolute;left:20px;top:74px;width:1560px;height:744px;display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(4,1fr);gap:7px}
+.cell{position:relative;margin:0;padding:0;font:inherit;text-align:center;background:var(--card);border:2px solid var(--line);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;cursor:pointer;color:var(--fg);min-width:0;min-height:0}
+.cell .band{height:30px;flex:none;display:flex;align-items:center;justify-content:center;font:400 15px 'Russo One',sans-serif;letter-spacing:.05em}
+.cell .body{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:4px}
+.cell .short{font-size:12px;color:var(--mut);line-height:1.2}
+.cell.dark{background:#26272C;border-color:var(--acc)}.cell.dark .short{color:#D6D1C7}
+.cell.deck{box-shadow:3px 3px 0 0 #E7E1D3,5px 5px 0 0 var(--dc),7px 7px 0 0 #E7E1D3,9px 9px 0 0 var(--dc)}
+.cell.here{outline:4px solid var(--acc);outline-offset:-2px}
+.cell.reach{border-color:#2E7D46;border-width:3px}
+.cell .reach-b{position:absolute;right:6px;top:34px;background:#2E7D46;color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:8px}
+.cell .toks{position:absolute;left:6px;bottom:5px;display:flex}
+.center{grid-row:2/4;grid-column:2/6;position:relative;background:#D9D1C1;border:2px solid #C6BBA6;border-radius:16px;display:flex;gap:12px;padding:10px;min-height:0}
+.act{width:430px;flex:none;background:var(--card);border-radius:12px;padding:10px 12px;overflow:auto;font-size:14px}
+.act p{margin:6px 0}.act label{font-size:13px}
+.act .turn{font-weight:600;margin-bottom:4px}
+.act .log{margin-top:8px;border-top:1px solid var(--line);padding-top:6px;font-size:12px;color:var(--mut)}
+.gar{flex:1;min-width:0;position:relative;display:flex;flex-direction:column;gap:8px}
+.gar .gh{display:flex;gap:16px;align-items:baseline;font-size:14px;color:#3A3B40}
+.gar .gh b{font:400 19px 'Russo One',sans-serif;color:#1E1F22}
+.cols{flex:1;min-height:0;display:grid;grid-auto-flow:column;grid-template-rows:repeat(3,88px);grid-auto-columns:188px;gap:10px 16px;overflow-x:auto;overflow-y:hidden;align-content:start;padding-bottom:4px}
+.pair{display:flex;gap:4px;cursor:pointer}
+.cc{width:112px;height:88px;flex:none;position:relative;background:var(--card);border:2px solid var(--dc);border-radius:9px;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box}
+.cc .b{height:17px;flex:none;background:var(--dc);color:var(--df);font:400 10px/17px 'Russo One',sans-serif;letter-spacing:.05em;text-align:center}
+.cc .im{flex:1;display:flex;align-items:center;justify-content:center;min-height:0}
+.cc .pr{font-size:11px;font-weight:700;text-align:center;padding-bottom:3px;white-space:nowrap}
+.cc .tint{position:absolute;inset:0;pointer-events:none;background:linear-gradient(135deg,rgba(204,40,40,.32) 0,rgba(204,40,40,.32) 34%,rgba(204,40,40,0) 34%)}
+.dc{width:70px;height:88px;flex:none;border:2px solid #8E2A24;background:#F7E6E3;border-radius:9px;overflow:hidden;display:flex;flex-direction:column;box-sizing:border-box;font-size:10px;text-align:center}
+.dc .b{height:17px;flex:none;background:#8E2A24;color:#fff;font-weight:700;letter-spacing:.06em;line-height:17px}
+.dc .t{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2px;line-height:1.2}
+.dc.empty{border:2px dashed #B9AE98;background:transparent}
+.ov{position:absolute;inset:0;z-index:5;background:rgba(217,209,193,.97);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+.big{width:560px;height:260px;display:flex;border-radius:16px;overflow:hidden;border:3px solid var(--dc);background:var(--card);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.big .sc{width:60%;position:relative;display:flex;align-items:center;justify-content:center}
+.big .nm{position:absolute;left:0;right:0;bottom:0;padding:8px 12px;background:rgba(23,24,27,.84);color:#fff;display:flex;justify-content:space-between;align-items:center;font:400 19px 'Russo One',sans-serif}
+.big .inf{width:40%;padding:12px 14px;display:flex;flex-direction:column;gap:6px;font-size:13px}
+.big .row2{display:flex;justify-content:space-between;align-items:baseline}.big .row2 b{font:400 17px 'Russo One',sans-serif}
+.bigdef{width:200px;height:260px;border:3px solid #8E2A24;background:#F7E6E3;border-radius:16px;display:flex;flex-direction:column;overflow:hidden;box-shadow:0 12px 30px rgba(0,0,0,.3);animation:fly .8s cubic-bezier(.2,.8,.2,1)}
+.bigdef .b{background:#8E2A24;color:#fff;font:400 17px 'Russo One',sans-serif;padding:9px 12px}
+.bigdef .t{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:12px;text-align:center}
+@keyframes fly{0%{transform:translateX(900px) rotate(18deg)}100%{transform:none}}
+#info{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:20;width:640px;background:var(--card);border:4px solid var(--acc);border-radius:16px;box-shadow:0 16px 40px rgba(0,0,0,.35);display:none;pointer-events:none;overflow:hidden}
+#info .ih{padding:12px 20px;font:400 28px 'Russo One',sans-serif}#info .ib{padding:14px 20px 18px;font-size:18px;line-height:1.5;white-space:pre-line}
+.pls{position:absolute;left:20px;right:20px;bottom:10px;height:62px;display:flex;gap:10px}
+.pl{position:relative;flex:1;border-radius:12px;border:2px solid #C6BBA6;background:var(--card);display:flex;align-items:center;gap:10px;padding:0 14px;outline:none}
+.pl.cur{border-color:var(--acc);box-shadow:0 0 0 2px var(--acc)}.pl.out{opacity:.45}
+.pl .n{flex:1;font-weight:600;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pl .m{font:400 19px 'Russo One',sans-serif}
+.pl .pop{display:none;position:absolute;left:0;bottom:70px;width:360px;max-height:360px;overflow:auto;background:#2C2D33;color:#fff;border-radius:12px;padding:12px 14px;z-index:30;box-shadow:0 14px 36px rgba(0,0,0,.5);font-size:13px}
+.pl:hover .pop,.pl:focus .pop,.pl:focus-within .pop{display:block}
+.pl .pop .r{display:flex;gap:8px;align-items:center;margin:4px 0}
+.rot{display:none;position:fixed;inset:auto 0 0 0;padding:8px;text-align:center;background:#2C2D33;color:#fff;z-index:60;font-size:14px}
+@media (orientation:portrait){.ingame .rot{display:block}}
 </style></head><body><main>
-<h1>🚗 Rust to Riches <span class="mut" style="font-size:13px">— от ржавого ведра до миллионера</span></h1>
-<div id="app"></div><div id="dice"></div>
+<h1>Rust to Riches <span>— от ржавого ведра до миллионера</span></h1>
+<div id="app"></div><div id="dice"></div><div class="rot">Поверните телефон горизонтально — так поле видно целиком</div>
 </main>
 <script>
 // Rust to Riches — движок правил (чистый JS, без зависимостей, работает в Node и в браузере).
@@ -987,9 +1033,9 @@ function onData(d){
  ME=d.me;LOBBY=d;if(d.catalog)CAT=d.catalog;
  if(d.phase==='lobby'){G=null;lobby();return}
  G=Object.assign(d.state,{catalog:CAT});deadline=Date.now()+(d.deadline-d.now);curKey=d.key;
- const ev=d.events||[];ev.forEach(e=>logs.unshift(fmt(e)));const gs=ev.filter(e=>e.type==='car_gained');if(gs.length)lastGains=gs;
+ const ev=d.events||[];ev.forEach(e=>logs.unshift(fmt(e)));const gs=ev.filter(e=>e.type==='car_gained');if(gs.length){lastGains=gs;gainAt=Date.now();setTimeout(()=>{if(G)render()},6100)}
  toast='';render();if(ev.length)showDice(ev)}
-function lobby(msg){const app=$('#app');
+function lobby(msg){document.body.classList.remove('ingame');const app=$('#app');
  if(!TOKEN){const q=(new URLSearchParams(location.search).get('room')||'').toUpperCase();
   app.innerHTML='<div class="card"><p>Ваше имя:</p><input id="nm" maxlength="16" style="width:100%">'+(msg?'<p class="bad">'+msg+'</p>':'')+'<p><button id="cr">Создать комнату</button></p><p>или код комнаты: <input id="rc" value="'+q+'" maxlength="4" style="width:90px;text-transform:uppercase"> <button id="jn" class="sec">Войти</button></p></div>';
   const go=async(path,body)=>{const r=await api(path,body);if(r.error){lobby(r.error);return}ROOM=r.room;TOKEN=r.token;store.set({ROOM,TOKEN});history.replaceState(null,'','/?room='+ROOM);connect()};
@@ -1042,7 +1088,7 @@ if(s.phase==='auction'){const A=s.auction;
  h.push(`<p>Аукцион: «${cn(A.cardId)}» · сейчас <b>${eur(A.bid)}</b> (${nm(A.bidder)}). После каждой ставки новый отсчёт 30 с. У вас ${eur(p.cash)}.</p>`+(A.passed&&A.passed.includes(ME)?'<p class="mut">Вы отказались от торгов.</p>':A.bidder===ME?'<p class="mut">Ваша ставка лидирует.</p>':`<input id="amt" type="number" value="${A.bid+10}" min="${A.bid+1}" step="10" style="width:110px"><button data-bid="1">Сделать ставку</button> <button class="sec" data-a='{"type":"auction_pass"}'>Отказаться от торгов</button>`))}
 if(s.phase==='repair'){const r=has('repair')[0],cs=repairCosts(s,p.id);
  h.push(`<p>${r.roll?'Куб «Средний класс»: <b>'+r.roll+'</b>. ':''}Отметьте машины, итог считается ниже. У вас ${eur(p.cash)}.</p>`);
- p.cars.filter(c=>cs[c.id]!=null).forEach(c=>h.push(`<label style="display:block"><input type="checkbox" class="rc" value="${c.id}" data-c="${cs[c.id]}"> ${carLabel(c)} — <b>${eur(cs[c.id])}</b></label>`));
+ p.cars.filter(c=>cs[c.id]!=null).forEach(c=>h.push(`<label style="display:block"><input type="checkbox" class="rc" value="${c.id}" data-c="${cs[c.id]}"> ${chip(c.id)} ${cn(c.id)}${c.defect?' ('+c.defect.name+')':''} — ремонт <b>${eur(cs[c.id])}</b></label>`));
  h.push(`<p>Итого: <b id="rt2">0 €</b> <span id="rw" class="bad"></span></p><button data-rep="1">Починить выбранные</button><button class="sec" data-a='{"type":"repair","carIds":[]}'>Ничего не чинить</button>`)}
 if(s.phase==='race_setup'){const others=s.players.filter(q=>q.id!==p.id&&!q.eliminated&&q.cars.length&&Math.floor(q.cash/2)>=100);
  h.push(`<button data-a='{"type":"race_open"}'>Открытая гонка (без вызова)</button>`);
@@ -1061,29 +1107,124 @@ if(s.phase==='race_roll')h.push('<p>Ваш бросок в гонке (15 с, и
 if(s.phase==='race_reroll')h.push(`<p>Организатор может перебросить куб (максимум из двух).</p><button data-a='{"type":"race_reroll"}'>Перебросить</button><button class="sec" data-a='{"type":"race_keep"}'>Оставить</button>`);
 return h.join('')}
 
+// ===================== ИГРОВОЙ ЭКРАН (фиксированная сцена 1600×900) =====================
+const CDL={dealer:'Дилер — старт и финиш круга.\nПродай любые свои машины по цене с карточки. Неотремонтированные — за 50%.',
+vedro:'Economy — белая колода.\nПосле покупки прилетает дефект из колоды дефектов Economy.',
+avtoservis:'Автосервис.\nОтметь машины для ремонта: видна цена каждой и общая сумма.',
+gonka_reroll:'Гонка.\nВызови игрока на ставку (кратно 100 €, не больше половины его денег). Организатор может перебросить кубик, если выпало меньше 6.',
+avtopodbor:'Авторынок.\nМожно открыть верхнюю карту любой колоды и купить её.',
+lottery:'Лотерея — карта удачи.\nВыигрыш, покупатель, страховка, обмен, пост ДПС, эвакуатор, колесо, день рождения, отзывная кампания, налог на роскошь, выставка ретро.',
+bitye:'Crash — битые машины, оранжевая колода.\nЦена восстановления решается кубиком: 1–2 / 3–4 / 5–6.',
+tehosmotr:'Техосмотр — 100 € за каждую машину.\nКарта: −10% на ремонт или +10% к продаже на 2 круга, либо скрытый дефект (страховка защищает).',
+perekup:'Перекуп.\nПродай одну машину по цене с карточки. Неотремонтированная — за 50%.',
+family:'Family — зелёная колода, машины приходят целыми.\nКаждый проход или остановка на этой клетке: +10% к цене продажи твоих Family, максимум +30%.',
+premium:'Luxury — синяя колода.\nПосле покупки прилетает карта из колоды дефектов Luxury (дороже). Там же 2 карты «Обмен на 2 машины Economy».',
+ugon:'Угон.\nБрось кубик: 5 — угоняешь неотремонтированную машину Economy, Crash или Family у ближайшего игрока впереди, 6 — любого класса. Застрахованные не угнать.',
+prokat:'Прокат — только отремонтированные машины.\nEconomy, Crash — 500 € · Family, Luxury — 1 000 € · Classic — 1 500 €.',
+retro:'Classic — красная колода.\nПокупается только через аукцион. Реставрация — по цене на карте.',
+bank:'Банк.\nПолучи 5% от своих наличных.'};
+const DC={vedro:['#ECE8DF','#1E1F22','#8A867D'],bitye:['#F08A24','#1E1F22','#D9761A'],family:['#2E7D46','#fff','#2E7D46'],premium:['#1F5FAE','#fff','#1F5FAE'],retro:['#B3261E','#fff','#B3261E']};
+const SPECIAL={avtoservis:['#3A3B40','#fff'],avtopodbor:['#3A3B40','#fff'],tehosmotr:['#3A3B40','#fff'],prokat:['#3A3B40','#fff'],lottery:['#7A4FB5','#fff'],bank:['#E2B84A','#1E1F22']};
+const DARK={dealer:1,gonka_reroll:1,perekup:1,ugon:1};
+const ICON={avtoservis:'<path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.4-.6-.6-2.4z"/>',
+gonka_reroll:'<path d="M5 22V3"/><path d="M5 4h14l-2.5 4.5L19 13H5"/>',
+avtopodbor:'<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.6"/>',
+lottery:'<rect x="3" y="3" width="18" height="18" rx="3.5"/><circle cx="8" cy="8" r="1.3" fill="currentColor"/><circle cx="16" cy="8" r="1.3" fill="currentColor"/><circle cx="12" cy="12" r="1.3" fill="currentColor"/><circle cx="8" cy="16" r="1.3" fill="currentColor"/><circle cx="16" cy="16" r="1.3" fill="currentColor"/>',
+tehosmotr:'<rect x="5" y="4" width="14" height="17" rx="2"/><rect x="9" y="2" width="6" height="4" rx="1"/><path d="M9 13l2 2 4-4"/>',
+perekup:'<path d="M17 2l4 4-4 4"/><path d="M3 11V9a3 3 0 0 1 3-3h15"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v2a3 3 0 0 1-3 3H3"/>',
+ugon:'<path d="M2 10c0-2 3.5-3 10-3s10 1 10 3-1.8 6-5 6c-2.4 0-3.2-2-5-2s-2.6 2-5 2c-3.2 0-5-4-5-6z"/>',
+prokat:'<circle cx="7.5" cy="15.5" r="4.5"/><path d="M10.7 12.3L21 2"/><path d="M16 7l3 3"/><path d="M18.5 4.5l2 2"/>',
+bank:'<path d="M3 21h18"/><path d="M3 8l9-5 9 5z"/><path d="M4 10h16"/><path d="M6 10v8M10 10v8M14 10v8M18 10v8"/>',
+dealer:'<path d="M3 21h18"/><path d="M5 21V9l7-5 7 5v12"/><path d="M9 21v-6h6v6"/>'};
+const icon=(k,col,sz)=>`<svg width="${sz}" height="${sz}" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:${col}" aria-hidden="true">${ICON[k]||''}</svg>`;
+// ---- машины (свои рисунки, без марок) ----
+const W2=(w,h,vb,inner)=>`<svg width="${w}" height="${h}" viewBox="${vb}" aria-hidden="true">${inner}</svg>`;
+const WH=(cx,r,hub)=>`<circle cx="${cx}" cy="44" r="${r}" fill="#222"/><circle cx="${cx}" cy="44" r="${hub}" fill="#BDBDBD"/>`;
+const CARS={
+vedro:'<path d="M16 44 L16 32 Q18 25 28 23 L40 12 Q44 8 52 8 L80 8 Q88 8 92 14 L100 26 Q106 28 106 34 L106 44 Z" fill="#F4F2EC" stroke="#1E1F22" stroke-width="1.4"/><path d="M45 12 L53 11 L65 11 L65 24 L35 24 Z" fill="#CFE0EA"/><path d="M69 11 L81 11 Q86 12 89 16 L94 24 L69 24 Z" fill="#CFE0EA"/><rect x="16" y="31" width="5" height="3" rx="1" fill="#FFD66B"/>'+WH(34,9,4)+WH(88,9,4),
+bitye:'<path d="M8 40 L2 47" stroke="#1E1F22" stroke-width="2"/><path d="M9 44 L9 35 Q10 30 15 29 L21 28 L18 25 L25 26 L30 23 L35 22 L46 11 Q50 9 58 9 L82 9 Q90 9 96 15 L104 24 Q113 26 114 33 L114 44 Z" fill="#F08A24" stroke="#1E1F22" stroke-width="1.4"/><path d="M51 13 L68 13 L68 22 L42 22 Z" fill="#CFE0EA"/><path d="M50 13 L45 21 M48 16 L54 19" stroke="#1E1F22" stroke-width=".9"/><path d="M72 13 L84 13 Q89 14 93 18 L96 22 L72 22 Z" fill="#CFE0EA"/><path d="M58 31 q4 4 9 0" stroke="#1E1F22" fill="none"/><circle cx="28" cy="45" r="9" fill="#222"/>'+WH(94,9,4),
+premium:'<path d="M4 44 L4 35 Q6 29 18 28 L38 25 L52 13 Q56 11 64 11 L84 11 Q92 11 98 17 L106 25 Q116 27 116 35 L116 44 Z" fill="#1F5FAE" stroke="#1E1F22" stroke-width="1.4"/><path d="M56 15 L72 15 L72 24 L44 24 Z" fill="#CFE0EA"/><path d="M76 15 L86 15 Q91 16 95 20 L99 24 L76 24 Z" fill="#CFE0EA"/><rect x="4" y="32" width="6" height="3" rx="1" fill="#FFD66B"/>'+WH(26,9,4.5)+WH(94,9,4.5),
+retro:'<path d="M4 44 Q4 33 14 31 L30 29 Q36 15 50 14 L72 14 Q84 15 90 29 L106 31 Q116 33 116 41 L116 44 Z" fill="#B3261E" stroke="#1E1F22" stroke-width="1.4"/><path d="M40 18 Q46 17 58 17 L58 28 L36 28 Z" fill="#CFE0EA"/><path d="M62 17 L72 17 Q80 18 84 28 L62 28 Z" fill="#CFE0EA"/><circle cx="9" cy="34" r="2.5" fill="#FFD66B"/><circle cx="26" cy="44" r="9" fill="#222"/><circle cx="26" cy="44" r="6" fill="#F4F2EC"/><circle cx="94" cy="44" r="9" fill="#222"/><circle cx="94" cy="44" r="6" fill="#F4F2EC"/>'};
+// Family: тюнингованные машины (кузов, цвет, диски, крыло — по номеру карты)
+const FRONT='M5 47 L5 37 Q6 31 18 30 L48 27 L64 14 Q68 12 76 12 ';
+const FSH={sedan:{b:FRONT+'L104 12 Q112 12 118 18 L128 26 L148 28 Q154 29 154 36 L154 47 Z',rx:124,end:154,w2:'M90 15 L103 15 Q109 15 114 20 L118 26 L90 26 Z',w3:'',roof:0,deck:130},
+wagon:{b:FRONT+'L140 12 Q146 12 148 18 L151 28 Q154 29 154 36 L154 47 Z',rx:124,end:154,w2:'M90 15 L116 15 L116 26 L90 26 Z',w3:'M120 15 L138 15 Q143 15 145 19 L147 26 L120 26 Z',roof:142,deck:0},
+lift:{b:FRONT+'L106 12 Q116 12 126 20 L148 28 Q154 29 154 36 L154 47 Z',rx:124,end:154,w2:'M90 15 L105 15 Q113 15 121 21 L124 26 L90 26 Z',w3:'',roof:0,deck:136},
+hatch:{b:FRONT+'L120 12 Q127 12 131 20 L136 29 Q140 30 140 36 L140 47 Z',rx:112,end:140,w2:'M90 15 L118 15 Q123 15 127 21 L130 26 L90 26 Z',w3:'',roof:124,deck:0}};
+const FD=[['sedan','#D9CDB0','#A0703A','','wing'],['hatch','#2F6FD6','#1E1F22','#fff','roof'],['sedan','#B23A48','#D0D4DA','','lip'],['hatch','#F2C14E','#1E1F22','#1E1F22','roof'],['lift','#5E8C61','#D0D4DA','','lip'],['wagon','#9AA3AD','#C9A227','','roof'],['lift','#2B2D42','#C9A227','#E0662F','wing'],['lift','#C0C5CE','#1E1F22','','lip'],['sedan','#7B2D26','#D0D4DA','','wing'],['sedan','#EDEDED','#1E1F22','#B3261E','lip'],['sedan','#4A5568','#A0703A','','wing'],['sedan','#1F3A5F','#D0D4DA','','lip'],['sedan','#C1121F','#1E1F22','#fff','wing'],['sedan','#0F4C81','#C9A227','','lip'],['sedan','#111317','#D0D4DA','#C9A227','lip'],['wagon','#6C757D','#1E1F22','','roof']];
+function famInner(num){const d=FD[(num-1)%FD.length],s=FSH[d[0]],fx=36,rx=s.rx;let wing='';
+ if(d[4]==='wing'&&s.deck)wing=`M${s.deck-2} 20 L${s.deck+18} 18.5 L${s.deck+18} 21 L${s.deck-2} 22.5 Z M${s.deck+3} 22 L${s.deck+4} 27 M${s.deck+13} 21 L${s.deck+14} 27`;
+ else if(d[4]==='lip'&&s.deck)wing=`M${s.end-12} 27.5 L${s.end} 26 L${s.end} 28 Z`;else if(s.roof)wing=`M${s.roof-8} 11 L${s.roof+6} 11 L${s.roof+4} 14 L${s.roof-8} 13 Z`;
+ const wh=(x)=>`<circle cx="${x}" cy="47" r="12" fill="#141516"/><circle cx="${x}" cy="47" r="8" fill="${d[2]}"/><circle cx="${x}" cy="47" r="2.4" fill="#141516"/>`;
+ return `<path d="${s.b}" fill="${d[1]}" stroke="#141516" stroke-width="1.5" stroke-linejoin="round"/>${d[3]?`<path d="M8 38.5 L${s.end-4} 38.5" stroke="${d[3]}" stroke-width="2.4"/>`:''}<path d="M67 15 L86 15 L86 26 L54 26 Z" fill="#BFD3DF" stroke="#141516" stroke-width=".9"/><path d="${s.w2}" fill="#BFD3DF" stroke="#141516" stroke-width=".9"/>${s.w3?`<path d="${s.w3}" fill="#BFD3DF" stroke="#141516" stroke-width=".9"/>`:''}<path d="M${fx-16} 47 Q${fx} 26 ${fx+16} 47 Z M${rx-16} 47 Q${rx} 26 ${rx+16} 47 Z" fill="rgba(0,0,0,.28)"/><path d="M${fx+15} 45 L${rx-15} 45 L${rx-15} 48.5 L${fx+15} 48.5 Z" fill="#1E1F22"/>${wing?`<path d="${wing}" fill="#1E1F22" stroke="#1E1F22"/>`:''}<path d="M7 33.5 L21 32" stroke="#FFE08A" stroke-width="2.6" stroke-linecap="round"/>${wh(fx)}${wh(rx)}`}
+function carSVG(id,w){const k=G.catalog[id];if(k.deck==='family')return W2(w,Math.round(w*.4),'0 0 160 64',famInner(k.num));return W2(w,Math.round(w*56/120),'0 0 120 56',CARS[k.deck]||CARS.vedro)}
+const shownPrice=(c)=>{const k=G.catalog[c.id];return Math.round(k.sell*(k.deck==='family'?1+0.1*(c.fam||0):1)/10)*10}; // актуальная цена с карточки (без −50%)
+function defInfo(c){const k=G.catalog[c.id];
+ if(c.repaired)return null;
+ if(c.defect){if(c.defect.kind==='unrepairable')return [c.defect.name,'не ремонтируется · аукцион '+eur(k.auction_start)];if(c.defect.kind==='buyer')return [c.defect.name,'продаётся как целая'];if(c.defect.kind==='swap_pay')return [c.defect.name,''];return [(c.hidden?'Скрытый: ':'')+c.defect.name,'ремонт '+eur(c.defect.repair.cost)]}
+ if(k.deck==='bitye')return ['Восстановление','кубик: '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')];
+ if(k.deck==='retro')return ['Реставрация','ремонт '+eur(k.repair.cost)];return ['Ремонт','']}
+let infoK=null,gainAt=0;
+function scale(){const st=$('#stage');if(!st)return;const k=Math.min(innerWidth/1600,innerHeight/900);st.style.transform=`translate(-50%,-50%) scale(${k})`}
+addEventListener('resize',scale);
+function showInfo(i){const el=$('#info');if(!el)return;if(i==null){el.style.display='none';return}const k=BOARD[i],c=DC[k]||SPECIAL[k]||['#26272C','#fff'];
+ el.style.borderColor=DARK[k]?'#E0662F':(DC[k]?DC[k][2]:c[0]);el.innerHTML=`<div class="ih" style="background:${DARK[k]?'#E0662F':c[0]};color:${DARK[k]?'#1E1F22':c[1]}">${CN[k]}</div><div class="ib">${CDL[k]}</div>`;el.style.display='block'}
+function cellHTML(i,s,reach){const k=BOARD[i],g=GRID[i],me=s.players[ME];let band,bandFg,cls='cell',body='';
+ if(DC[k]){band=DC[k][0];bandFg=DC[k][1];cls+=' deck';body=W2(118,55,'0 0 120 56',CARS[k]||'')}
+ else if(DARK[k]){band='#E0662F';bandFg='#1E1F22';cls+=' dark';body=icon(k,'#E0662F',46)}
+ else{const c=SPECIAL[k]||['#3A3B40','#fff'];band=c[0];bandFg=c[1];body=icon(k,k==='lottery'?'#7A4FB5':k==='bank'?'#7A5C14':'#3A3B40',46)}
+ if(k==='family')body=W2(130,52,'0 0 160 64',famInner(5));if(k==='lottery')cls+=' deck';
+ if(s.players[s.current].pos===i)cls+=' here';const r=reach[i];if(r)cls+=' reach';
+ const toks=s.players.filter(q=>q.pos===i&&!q.eliminated).map(q=>`<span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span>`).join('');
+ return `<button type="button" class="${cls}" data-cell="${i}" style="grid-row:${g[0]};grid-column:${g[1]};--dc:${DC[k]?DC[k][2]:'#7A4FB5'}"><span class="band" style="background:${band};color:${bandFg}">${CN[k].toUpperCase()}</span><span class="body">${body}<span class="short">${CD[k]}</span></span>${r?`<span class="reach-b">${r.steps} ${r.steps==1?'шаг':'шага'}${r.cost?' · '+eur(r.cost):''}</span>`:''}<span class="toks">${toks}</span></button>`}
+function pairHTML(c){const k=G.catalog[c.id],d=DC[k.deck],di=defInfo(c);
+ return `<div class="pair" title="${k.name}"><div class="cc" style="--dc:${d[2]};--df:${d[1]}"><div class="b" style="background:${d[0]}">${DN[k.deck].toUpperCase()}</div><div class="im">${carSVG(c.id,96)}</div><div class="pr">${k.name} · ${eur(shownPrice(c))}${c.fam?' <span style="color:#2E7D46">+'+c.fam*10+'%</span>':''}</div>${di?'<div class="tint"></div>':''}</div>`+
+ (di?`<div class="dc"><div class="b">${c.hidden?'СКРЫТЫЙ':k.deck==='bitye'?'КРАШ':k.deck==='retro'?'РЕСТАВР.':'ДЕФЕКТ'}</div><div class="t"><b>${di[0]}</b>${di[1]}</div></div>`:'<div class="dc empty"></div>')+'</div>'}
+function bigCard(id,title){const k=G.catalog[id],d=DC[k.deck],scn={vedro:'#C9D6DF',bitye:'#D8D2C8',family:'#C7DCCB',premium:'#C6D0E2',retro:'#E2D3C4'}[k.deck];
+ const repTxt=k.deck==='family'?'Без дефекта · +10% за проход клетки Family, до +30%':k.deck==='bitye'?'Восстановление по кубику: '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / '):k.deck==='retro'?'Реставрация '+eur(k.repair.cost):'После покупки — дефект из колоды '+DN[k.deck];
+ return `<div class="big" style="--dc:${d[2]}"><div class="sc" style="background:${scn}"><div style="margin-bottom:34px">${carSVG(id,280)}</div><div class="nm"><span>${k.name}</span><span class="chip" style="background:${d[0]};color:${d[1]}">${DN[k.deck].toUpperCase()}</span></div></div><div class="inf"><div class="mut" style="font-size:11px;letter-spacing:.1em">${title||''}</div>${k.buy!=null?`<div class="row2"><span>Покупка</span><b>${eur(k.buy)}</b></div>`:'<div class="row2"><span>Покупка</span><b>аукцион</b></div>'}<div class="row2"><span>Продажа</span><b style="color:#2E7D46">${eur(k.sell)}</b></div><div class="row2"><span>Старт аукциона</span><b style="color:#1F5FAE">${eur(k.auction_start)}</b></div><div style="height:2px;background:#DDD6C8;margin:2px 0"></div><div>${repTxt}</div></div></div>`}
+function overlay(s){
+ if(s.phase==='buy'&&s.pending)return `<div class="ov">${bigCard(s.pending.cardId,'ОТКРЫТАЯ КАРТА')}<div class="mut">${CN[BOARD[s.players[s.current].pos]]}: решение — в панели слева</div></div>`;
+ if(s.phase==='auction'&&s.auction)return `<div class="ov">${bigCard(s.auction.cardId,'АУКЦИОН')}<div style="font:400 24px 'Russo One'">Ставка: ${eur(s.auction.bid)} · ${nm(s.auction.bidder)}</div></div>`;
+ if(lastGains.length&&Date.now()-gainAt<6000){const g=lastGains[lastGains.length-1],k=G.catalog[g.cardId];
+  const def=g.defect?`<div class="bigdef"><div class="b">ДЕФЕКТ</div><div class="t"><b style="font-size:17px">${g.defect}</b>${g.defectCost?'Ремонт '+eur(g.defectCost):(g.defectText||'')}</div></div>`:k.deck==='bitye'?`<div class="bigdef"><div class="b">ВОССТАНОВЛЕНИЕ</div><div class="t">Цену решит кубик в Автосервисе:<br><b>${[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')}</b></div></div>`:'';
+  return `<div class="ov"><div style="display:flex;gap:16px;align-items:center">${bigCard(g.cardId,'ПОЛУЧЕНО: '+nm(g.player).toUpperCase())}${def}</div></div>`}
+ return ''}
 function render(){
 if(!G)return lobby();
-const s=G;
-const cur=s.players[actor(s)]||s.players[s.current];
-let b='';
-GRID.forEach((g,i)=>{const k=BOARD[i];b+=`<div class="cell ${DN[k]?'c-'+k:'c-sp'} ${s.players[s.current].pos===i?'now':''}" style="grid-row:${g[0]};grid-column:${g[1]}" title="${CN[k]}: ${CD[k]}"><b>${CN[k]}</b><span class="mut" style="font-size:11px">${CD[k]}</span><span>${s.players.filter(q=>q.pos===i).map(q=>`<span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span>`).join('')}</span></div>`});
-b+=`<div class="mid"><div class="timer" id="tm"></div><div>Круг ${s.round} · цель ${eur(s.goal)}</div><div>${Object.entries(s.decks).map(([k,v])=>DN[k]+': '+v.length).join(' · ')}</div>%%PANEL%%</div>`;
-let side=s.players.map(q=>`<div class="card" style="${q.id===s.current?'border-color:var(--acc)':''}${q.eliminated?';opacity:.5':''}"><span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span><b>${q.name}</b> — ${eur(q.cash)}${q.eliminated?' (выбыл)':''}${q.insured?' 🛡':''}${q.saleBonusUntil>s.round?' <span class="chip" style="background:#e3f1e6">+10% продажа</span>':''}${q.repairBonusUntil>s.round?' <span class="chip" style="background:#e3f1e6">−10% ремонт</span>':''}${q.expo?' <span class="chip" style="background:#fde">выставка ретро</span>':''}<div class="mut">${q.cars.map(carLabel).join('<br>')||'нет машин'}</div>${q.cars.length?'<div><b>≈ при продаже: '+eur(q.cars.reduce((t,c)=>t+val(c),0))+'</b></div>':''}${s.loans.filter(l=>l.borrower===q.id).map(l=>`<div class="bad">Долг ${nm(l.lender)}: ${eur(loanDue(s,l))}${s.round-l.startRound>=5?' <b>⚠ СРОЧНО верните: на следующем круге заберут машину</b>':''}</div>`).join('')}</div>`).join('');
+document.body.classList.add('ingame');
+const s=G,me=s.players[ME]||s.players[0],cur=s.players[actor(s)]||s.players[s.current];
+const reach={};
+if(s.phase==='move'&&actor(s)===ME)for(let n=1;n<=7;n++){try{const to=destination(s,me,n);if(me.cash>=MOVE_COST[n]&&!reach[to])reach[to]={steps:n,cost:MOVE_COST[n]}}catch(e){}}
+let cells='';for(let i=0;i<BOARD.length;i++)cells+=cellHTML(i,s,reach);
+// гараж: сначала столбики машин с дефектами, потом целые
+const broken=me.cars.filter(c=>!c.repaired),okc=me.cars.filter(c=>c.repaired);
+let gar=broken.map(pairHTML).join('');for(let i=broken.length%3?3-broken.length%3:0;i>0;i--)gar+='<div></div>';gar+=okc.map(pairHTML).join('');
+const minAll=me.cars.reduce((t,c)=>t+(sellPrice(s,c,me)||0),0);
 let top;
 if(s.phase==='over')top=`<h2>🏆 Победил ${nm(s.winner)}!</h2><button id="again">В меню</button>`;
-else{
- const li=loanInfo(s,ME);let loan='';
+else{const li=loanInfo(s,ME);let loan='';
  if(s.phase==='loan'){const R=s.loanReq;loan='<p><b>'+nm(R.borrower)+'</b> просит в долг '+eur(R.amount)+'. 15 с на ответ.</p>'+(ME===R.borrower?'<button class="sec" data-a=\'{"type":"loan_cancel"}\'>Отмена</button>':(li.canAccept?'<button data-a=\'{"type":"loan_accept"}\'>Дать в долг '+eur(R.amount)+'</button>':'<span class="mut">У вас недостаточно денег</span>'))}
  else{if(li.canRequest)loan+=`<p class="mut">Не хватает денег? <input id="la" type="number" value="500" step="100" style="width:90px"><button class="sec" data-loan="1">Попросить в долг</button></p>`;
-  li.repayable.forEach(r=>{if(r.roundsLeft===0)loan+='<div class="bad"><b>⚠ Срочно верните долг '+nm(r.lender)+': '+eur(r.due)+'. На следующем круге у вас заберут машину.</b></div>';loan+=`<button class="sec" data-rep-loan="${r.loanId}">Вернуть ${nm(r.lender)}: ${eur(r.due)} (до взыскания машины: ${r.roundsLeft+1} кр.)</button>`})}
- top=`<div>Ходит: <span class="tok" style="background:${COL[cur.id]}">${cur.name[0]}</span><b>${cur.name}</b> · ${eur(cur.cash)} · клетка: <b>${CN[BOARD[s.players[s.current].pos]]||'—'}</b></div>${toast?`<div class="bad">${toast}</div>`:''}<div>${s.phase==='loan'?'':((['auction','race_join'].includes(s.phase)||actor(s)===ME)?controls():'<p class="mut">Ждём ход игрока '+cur.name+'…</p>')}${loan}</div>`}
-const panel=(s.phase==='buy'&&s.pending)?cardPanel(s.pending.cardId):(s.phase==='auction'&&s.auction)?cardPanel(s.auction.cardId):lastGains.map(g=>cardPanel(g.cardId,g.defect?{name:g.defect,cost:g.defectCost,text:g.defectText}:null,'Получено: '+nm(g.player))).join('');
-$('#app').innerHTML=`<div class="card">${top}</div><div class="row"><div><div class="board">${b.replace('%%PANEL%%',panel)}</div></div><div>${side}</div></div><div class="card log">${logs.slice(0,60).map(l=>'<div>'+l+'</div>').join('')}</div>`;
+  li.repayable.forEach(r=>{if(r.roundsLeft===0)loan+='<div class="bad"><b>⚠ Срочно верните долг '+nm(r.lender)+': '+eur(r.due)+'.</b></div>';loan+=`<button class="sec" data-rep-loan="${r.loanId}">Вернуть ${nm(r.lender)}: ${eur(r.due)}</button>`})}
+ const mine=(['auction','race_join'].includes(s.phase)||actor(s)===ME);
+ top=`<div class="turn">Ходит: <span class="tok" style="background:${COL[cur.id]}">${cur.name[0]}</span>${cur.name}${s.phase==='move'&&actor(s)===ME?' — <span style="color:#2E7D46">нажмите на зелёную клетку или кнопку</span>':''}</div>${toast?`<div class="bad">${toast}</div>`:''}<div>${s.phase==='loan'?'':(mine?controls():'<p class="mut">Ждём ход игрока '+cur.name+'…</p>')}${loan}</div>`}
+const players=s.players.map(q=>{const debt=s.loans.filter(l=>l.borrower===q.id).map(l=>`<div class="r" style="color:#FF8A80">Долг ${nm(l.lender)}: ${eur(loanDue(s,l))}</div>`).join('');
+ return `<div class="pl ${q.id===s.current?'cur':''} ${q.eliminated?'out':''}" tabindex="0"><span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span><span class="n">${q.name}${q.id===ME?' (вы)':''}${q.insured?' 🛡':''}</span><span class="mut" style="font-size:12px">${q.cars.length} маш.</span><span class="m">${eur(q.cash)}</span><div class="pop"><div style="display:flex;justify-content:space-between;font-weight:600;font-size:15px"><span>${q.name}</span><span>${eur(q.cash)}</span></div>${q.cars.map(c=>{const k=s.catalog[c.id],d=DC[k.deck],di=defInfo(c);return `<div class="r"><span class="chip" style="background:${d[0]};color:${d[1]};min-width:70px;text-align:center">${DN[k.deck]}</span><span>${k.name} · ${eur(shownPrice(c))}</span><span style="color:${di?'#FF8A80':'#7FD49A'}">${di?di[0]:'целая'}</span></div>`}).join('')||'<div class="mut">нет машин</div>'}${debt}</div></div>`}).join('');
+const bon=[me.saleBonusUntil>s.round?'+10% к продаже':'',me.repairBonusUntil>s.round?'−10% на ремонт':'',me.expo?'выставка ретро':'',me.insured?'страховка':''].filter(Boolean).join(' · ');
+$('#app').innerHTML=`<div class="vp"><div id="stage">
+<div class="hdr"><div><div class="ttl">RUST TO RICHES</div><div class="sub">от ржавого ведра до миллионера</div></div><div><span class="pill"><small>ЦЕЛЬ</small><b>${eur(s.goal)}</b></span><span class="pill"><small>РАУНД</small><b>${s.round}</b></span><span class="pill"><small>ТАЙМЕР</small><b id="tm"></b></span></div></div>
+<div class="board">${cells}<div class="center"><div class="act">${top}<div class="log">${logs.slice(0,5).map(l=>'<div>'+l+'</div>').join('')}</div></div><div class="gar"><div class="gh"><span>МОЙ ГАРАЖ</span><span>Деньги: <b>${eur(me.cash)}</b></span><span>Если продать всё сейчас: <b style="color:#2E7D46">${eur(minAll)}</b></span>${bon?`<span class="chip" style="background:#E3F1E6">${bon}</span>`:''}</div><div class="cols">${gar||'<div class="mut">Машин пока нет</div>'}</div>${overlay(s)}</div></div></div>
+<div class="pls">${players}</div><div id="info"></div></div></div>`;
+scale();
+document.querySelectorAll('[data-cell]').forEach(e=>{const i=+e.dataset.cell;
+ e.onmouseenter=()=>{infoK=i;showInfo(i)};e.onmouseleave=()=>{infoK=null;showInfo(null)};
+ e.onclick=()=>{if(reach[i])act({type:'move',steps:reach[i].steps});else{infoK=infoK===i?null:i;showInfo(infoK)}};
+ e.ondblclick=()=>showInfo(i)});
 document.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>act(JSON.parse(e.dataset.a)));
 const q=(sel,f)=>{const e=document.querySelector(sel);if(e)e.onclick=f};
 q('[data-auc]',()=>act({type:'auction_start',amount:+$('#amt').value}));
 q('[data-bid]',()=>act({type:'bid',amount:+$('#amt').value}));
-document.querySelectorAll('[data-as]').forEach(e=>e.onclick=()=>{const o=JSON.parse(e.dataset.as);act({type:o.type})});
 document.querySelectorAll('[data-st]').forEach(e=>e.onclick=()=>{rs+=+e.dataset.st;render()});
 const tg=$('#tg');if(tg)tg.onchange=()=>{rt=+tg.value;render()};
 const upd=()=>{let t=0;document.querySelectorAll('.rc:checked').forEach(e=>t+=+e.dataset.c);const c=G.players[ME].cash;if($('#rt2')){$('#rt2').textContent=eur(t);$('#rw').textContent=t>c?'не хватает '+eur(t-c):''}};
@@ -1091,7 +1232,6 @@ document.querySelectorAll('.rc').forEach(e=>e.onchange=upd);
 q('[data-rep]',()=>act({type:'repair',carIds:[...document.querySelectorAll('.rc:checked')].map(e=>e.value)}));
 q('[data-ch]',()=>act({type:'race_challenge',target:rt,stake:rs}));
 q('[data-loan]',()=>act({type:'loan_request',amount:+$('#la').value}));
-document.querySelectorAll('[data-lend]').forEach(e=>e.onclick=()=>actAs(+e.dataset.lend,{type:'loan_accept'}));
 document.querySelectorAll('[data-rep-loan]').forEach(e=>e.onclick=()=>act({type:'repay_loan',loanId:+e.dataset.repLoan}));
 document.querySelectorAll('.sc').forEach(e=>e.onchange=()=>{let x=0;document.querySelectorAll('.sc:checked').forEach(y=>x+=+y.dataset.v);$('#st').textContent=eur(x)});
 q('[data-swp]',()=>act({type:'swap_propose',carId:$('#sw1').value,target:+$('#swt').value,theirCarId:$('#sw2').value}));
@@ -1099,6 +1239,6 @@ const swt=$('#swt');if(swt)swt.onchange=()=>{sw.t=+swt.value;render()};
 q('[data-sell]',()=>act({type:'sell',carIds:[...document.querySelectorAll('.sc:checked')].map(e=>e.value)}));
 q('#again',leave)}
 
-setInterval(()=>{if(!G||G.phase==='over')return;const t=$('#tm');if(t)t.textContent=(TL[curKey[0]]||'')+Math.max(0,Math.ceil((deadline-Date.now())/1000))+' с'},250);
+setInterval(()=>{if(!G||G.phase==='over')return;const t=$('#tm');if(t)t.textContent=Math.max(0,Math.ceil((deadline-Date.now())/1000))+' с'},250);
 boot();
 </script></body></html>

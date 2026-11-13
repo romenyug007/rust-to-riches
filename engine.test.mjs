@@ -494,3 +494,18 @@ test('цель 100 000 € разрешена, другие значения н�
   assert.equal(createGame({ names: ['A', 'B'], goal: 100000, cards }).goal, 100000);
   assert.throws(() => createGame({ names: ['A', 'B'], goal: 70000, cards }));
 });
+
+test('обмен из колоды Luxury: машина Luxury уходит, игрок получает 2 машины Economy с дефектами', () => {
+  for (let seed = 1; seed <= 200; seed++) {
+    let s = at(mk(2, { seed }), 'premium'); const p = s.current; s.players[p].cash = 20000;
+    const before = s.players[p].cars.length;
+    s = ok(s, { type: 'buy_start' }); const id = s.pending.cardId;
+    s = ok(s, { type: 'buy_direct' });
+    if (!s.players[p].cars.some((c) => c.id === id)) {
+      const got = s.players[p].cars.slice(before);
+      assert.equal(got.length, 2); assert.ok(got.every((c) => s.catalog[c.id].deck === 'vedro' && c.defect && c.defect.kind !== 'swap'));
+      return;
+    }
+  }
+  assert.fail('обмен ни разу не выпал');
+});
