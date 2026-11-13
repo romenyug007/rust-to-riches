@@ -1,12 +1,19 @@
 // Rust to Riches — движок правил (чистый JS, без зависимостей, работает в Node и в браузере).
 // Все суммы в евро. Состояние сериализуется в JSON; applyAction возвращает новое состояние.
-// Этап 1: основной цикл игры. Пока НЕ реализованы: совместная покупка и долги между игроками.
+// Классы (ключ колоды → название): vedro → Economy, bitye → Crash, family → Family, premium → Luxury, retro → Classic.
 
 export const BOARD = [
-  'skupka',        // 0 — старт
-  'vedro', 'avtoservis', 'gonka_plus1', 'avtopodbor', 'bitye',
-  'skupka', 'premium', 'avtoservis', 'gonka_reroll', 'prokat', 'retro',
+  'dealer',        // 0 — Дилер: старт и финиш круга, продажа всех машин
+  'vedro', 'avtoservis', 'gonka_reroll', 'avtopodbor', 'lottery', 'bitye', 'tehosmotr',
+  'perekup', 'family', 'avtoservis', 'premium', 'ugon', 'prokat', 'retro', 'bank',
 ];
+const DEALER_POS = 0, FAMILY_POS = BOARD.indexOf('family');
+export const INSPECT_PER_CAR = 100;  // Техосмотр: 100 € за каждую машину
+export const BONUS_ROUNDS = 2;       // бонусы Техосмотра действуют 2 круга игры
+export const BANK_RATE = 0.05;       // Банк: +5% к наличным
+export const INSURANCE_COST = 200;   // Страховка из Лотереи, до конца игры
+export const FAMILY_STEP = 0.1, FAMILY_MAX = 3; // Family: +10% за проход клетки, максимум 3 раза
+const round10 = (x) => Math.round(x / 10) * 10;
 export const MOVE_COST = [null, 0, 0, 300, 600, 1000, 3000, 10000]; // индекс = число шагов
 export const START_CASH = 1500;
 export const RACE_POT = 1000;
@@ -20,9 +27,19 @@ export const LOAN_RATE_LATE = 0.2;  // с 5-го круга проценты н�
 export const LOAN_RATE = 0.1;        // +10% от суммы за каждый полный круг игры
 export const LOAN_DEADLINE_ROUNDS = 5; // через 5 кругов — принудительный возврат ×2
 export const DEFECT_COPIES = 2; // колоды дефектов бесконечные, состав кратен оригиналу
-const RENT = { vedro: 500, bitye: 500, premium: 1000, retro: 1000 };
-const TAXI = { vedro: 100, bitye: 100, premium: 200, retro: 200 };
-const CELL_DECK = { vedro: 'vedro', bitye: 'bitye', premium: 'premium', retro: 'retro' };
+const RENT = { vedro: 500, bitye: 500, family: 1000, premium: 1000, retro: 1500 };
+const TAXI = { vedro: 100, bitye: 100, family: 100, premium: 200, retro: 200 };
+const CELL_DECK = { vedro: 'vedro', bitye: 'bitye', family: 'family', premium: 'premium', retro: 'retro' };
+const CLASS_DECKS = ['vedro', 'bitye', 'family', 'premium', 'retro'];
+const INSPECT_TEMPLATE = [
+  ...Array(5).fill({ kind: 'repair_bonus' }), ...Array(5).fill({ kind: 'sale_bonus' }),
+  ...CLASS_DECKS.map((deck) => ({ kind: 'hidden', deck })),
+];
+const LOTTERY_TEMPLATE = [
+  { kind: 'win', amount: 100 }, { kind: 'win', amount: 500 }, { kind: 'win', amount: 1000 },
+  { kind: 'buyer' }, { kind: 'insurance' }, { kind: 'swap' }, { kind: 'dps' }, { kind: 'evac' }, { kind: 'tire' },
+  { kind: 'birthday' }, ...CLASS_DECKS.map((deck) => ({ kind: 'recall', deck })), { kind: 'lux_tax' }, { kind: 'expo' },
+];
 
 class Illegal extends Error {}
 const fail = (m) => { throw new Error(m); };
@@ -51,8 +68,9 @@ export function createGame({ names, goal = 30000, seed = 1, cards, forcedRolls }
   const s = {
     rng: seed >>> 0, goal, turn: 1, current: 0, phase: 'move', winner: null,
     round: 1, loans: [], nextLoanId: 1, loanReq: null, loanReturn: null,
-    players: names.map((name, id) => ({ id, name, cash: START_CASH, pos: 0, cars: [], eliminated: false })),
-    catalog: {}, decks: { vedro: [], bitye: [], premium: [], retro: [] },
+    players: names.map((name, id) => ({ id, name, cash: START_CASH, pos: 0, cars: [], eliminated: false, insured: false, repairBonusUntil: 0, saleBonusUntil: 0, expo: false })),
+    catalog: {}, decks: { vedro: [], bitye: [], family: [], premium: [], retro: [] },
+    inspectDeck: [], lotteryDeck: [], swapOffer: null, theft: null,
     defectTemplate: cards.defects, defectDecks: { vedro: [], premium: [] },
     pending: null, auction: null, race: null, repairRoll: null, log: [],
   };
@@ -82,7 +100,7 @@ export function createGame({ names, goal = 30000, seed = 1, cards, forcedRolls }
 function toBottom(s, car) { // проданные машины и снятые дефекты возвращаются в низ колоды
   const c = s.catalog[car.id];
   s.decks[c.deck].push(car.id);
-  if (car.defect && s.defectDecks[c.deck]) s.defectDecks[c.deck].push(car.defect);
+  if (car.defect && s.defectDecks[car.defect.deck]) s.defectDecks[car.defect.deck].push(car.defect);
 }
 function ev(s, e) { s.log.push(e); return e; }
 function refillDefects(s, deck) {
@@ -100,7 +118,7 @@ function takeDefect(s, deck, filter = () => true) {
 // выдать игроку машину; для «Эконом» и «Люкс» тянется дефект с мгновенным эффектом
 function giveCar(s, p, cardId, depth = 0) {
   const card = s.catalog[cardId];
-  const car = { id: cardId, repaired: false, defect: null, sellAsRepaired: false };
+  const car = { id: cardId, repaired: card.deck === 'family', defect: null, sellAsRepaired: false, fam: 0 };
   if (card.deck === 'vedro' || card.deck === 'premium') {
     let d = takeDefect(s, card.deck, depth >= 2 ? (x) => x.kind !== 'swap' : () => true);
     if (d.kind === 'swap' && s.decks.vedro.length < 1) d = takeDefect(s, card.deck, (x) => x.kind === 'repair');
@@ -123,23 +141,32 @@ const cellOf = (s, p) => BOARD[p.pos];
 const owned = (p, id) => p.cars.find((c) => c.id === id) || fail('У игрока нет такой машины');
 const isUnrepairable = (c) => c.defect && ['unrepairable', 'buyer', 'swap_pay'].includes(c.defect.kind);
 
-function repairCost(s, car) {
+const ownerOf = (s, car) => s.players.find((q) => q.cars.includes(car));
+function repairCost(s, car, p = ownerOf(s, car)) {
   const card = s.catalog[car.id];
   if (car.repaired || isUnrepairable(car)) return null;
-  if (card.deck === 'retro') return card.repair.cost;
-  if (card.deck === 'bitye') {
+  let cost;
+  if (car.defect && car.defect.repair) cost = car.defect.repair.cost; // дефект (в т.ч. скрытый с Техосмотра)
+  else if (card.deck === 'retro') cost = card.repair.cost;
+  else if (card.deck === 'bitye') {
     const r = s.repairRoll;
     if (r == null) return null;
-    return card.repair[r <= 2 ? 'die_1_2' : r <= 4 ? 'die_3_4' : 'die_5_6'];
-  }
-  return car.defect.repair.cost;
+    cost = card.repair[r <= 2 ? 'die_1_2' : r <= 4 ? 'die_3_4' : 'die_5_6'];
+  } else return null;
+  if (p && p.repairBonusUntil > s.round) cost = round10(cost * 0.9); // Техосмотр: −10% на ремонт
+  return cost;
 }
-function sellPrice(s, car) {
+// цена продажи: целая — по карте (Family — с ростом), неотремонтированная — 50%, неремонтируемая — аукционная
+function sellPrice(s, car, p = ownerOf(s, car)) {
   const card = s.catalog[car.id];
-  if (car.repaired || car.sellAsRepaired || (car.defect && car.defect.kind === 'buyer')) return card.sell;
   if (car.defect && car.defect.kind === 'unrepairable') return card.auction_start;
-  return null;
+  let price = card.sell * (card.deck === 'family' ? 1 + FAMILY_STEP * (car.fam || 0) : 1);
+  if (!(car.repaired || car.sellAsRepaired || (car.defect && car.defect.kind === 'buyer'))) price /= 2;
+  if (p && p.saleBonusUntil > s.round) price *= 1.1;  // Техосмотр: +10% к продаже
+  if (p && p.expo && card.deck === 'retro') price *= 1.1; // Лотерея: Выставка ретро
+  return round10(price);
 }
+const isBroken = (c) => !c.repaired && !(c.defect && c.defect.kind === 'buyer');
 const alive = (s) => s.players.filter((p) => !p.eliminated);
 const hasDebt = (s, p) => s.loans.some((l) => l.borrower === p.id);
 function carValue(s, car) { // оценка машины при взыскании долга: цена продажи, за вычетом ремонта, если он нужен
@@ -187,7 +214,8 @@ function settleLoans(s, p) {
   return false;
 }
 function nextTurn(s) {
-  s.pending = s.auction = s.race = s.repairRoll = s.loanReq = s.loanReturn = null;
+  if (cur(s) && cur(s).pos === DEALER_POS) cur(s).expo = false; // Выставка ретро — до Дилера
+  s.pending = s.auction = s.race = s.repairRoll = s.loanReq = s.loanReturn = s.swapOffer = s.theft = null;
   const n = s.players.length;
   for (let g = 0; g < 4 * n; g++) {
     s.current = (s.current + 1) % n;
@@ -222,6 +250,7 @@ function destination(s, p, steps) {
 // ---------- кто сейчас должен ходить ----------
 export function actor(s) {
   if (s.phase === 'loan') return s.loanReq.borrower;
+  if (s.phase === 'swap_offer') return s.swapOffer.to;
   if (s.phase === 'race_roll') return s.race.queue[0]; // бросает по очереди сам участник
   if (s.phase === 'auction') return null;   // открытые торги: могут все
   if (s.phase === 'race_join') return null; // открытое окно: могут все
@@ -262,8 +291,8 @@ const LOAN_ACTIONS = {
     let total = 0;
     for (const id of new Set(a.carIds)) {
       const car = owned(p, id);
-      if (!car.defect || !['unrepairable', 'buyer'].includes(car.defect.kind)) fail('Эту машину можно продать только на «Скупке»');
-      total += sellPrice(s, car);
+      if (!car.defect || !['unrepairable', 'buyer'].includes(car.defect.kind)) fail('Эту машину можно продать только у Перекупа или Дилера');
+      total += sellPrice(s, car, p);
     }
     for (const id of new Set(a.carIds)) toBottom(s, owned(p, id));
     p.cars = p.cars.filter((c) => !a.carIds.includes(c.id));
@@ -311,8 +340,14 @@ const HANDLERS = {
     const cost = MOVE_COST[n];
     if (p.cash < cost) fail('Не хватает денег на ход');
     const to = destination(s, p, n);
+    const from = p.pos;
     p.cash -= cost; p.pos = to; s.phase = 'act';
     ev(s, { type: 'moved', player: p.id, steps: n, cost, to, cell: BOARD[to] });
+    for (let i = (from + 1) % BOARD.length, g = 0; g < BOARD.length; i = (i + 1) % BOARD.length, g++) {
+      if (i === FAMILY_POS) familyTick(s, p);
+      if (i === DEALER_POS && i !== to) p.expo = false;
+      if (i === to) break;
+    }
   },
 
   act(s, p, a) {
@@ -339,16 +374,17 @@ const HANDLERS = {
       }
       case 'autoservice': {
         if (cell !== 'avtoservis') fail('Это не автосервис');
-        s.repairRoll = p.cars.some((c) => !c.repaired && s.catalog[c.id].deck === 'bitye') ? die(s) : null;
+        s.repairRoll = p.cars.some((c) => !c.repaired && !c.defect && s.catalog[c.id].deck === 'bitye') ? die(s) : null;
         s.phase = 'repair';
         return ev(s, { type: 'repair_roll', player: p.id, die: s.repairRoll });
       }
       case 'sell': {
-        if (cell !== 'skupka') fail('Это не скупка');
+        if (cell !== 'perekup' && cell !== 'dealer') fail('Продать можно у Перекупа или Дилера');
         if (!a.carIds || !a.carIds.length) fail('Выберите машины');
+        if (cell === 'perekup' && new Set(a.carIds).size > 1) fail('У Перекупа можно продать только одну машину');
         let total = 0;
         for (const id of new Set(a.carIds)) {
-          const car = owned(p, id), price = sellPrice(s, car);
+          const car = owned(p, id), price = sellPrice(s, car, p);
           if (price == null) fail('Эту машину нельзя продать');
           total += price;
         }
@@ -374,6 +410,16 @@ const HANDLERS = {
         s.phase = 'race_setup';
         return ev(s, { type: 'race_started', organizer: p.id, pot: RACE_POT });
       }
+      case 'inspection': return inspection(s, p, cell);
+      case 'lottery': return lottery(s, p, cell);
+      case 'bank': {
+        if (cell !== 'bank') fail('Это не банк');
+        const gain = Math.round(p.cash * BANK_RATE);
+        p.cash += gain;
+        ev(s, { type: 'bank', player: p.id, gain });
+        return nextTurn(s);
+      }
+      case 'theft': return theft(s, p, cell);
       case 'swap_pay': {
         const car = owned(p, a.carId);
         if (!car.defect || car.defect.kind !== 'swap_pay') fail('У машины нет такого дефекта');
@@ -458,13 +504,13 @@ const HANDLERS = {
     let total = 0;
     const ids = [...new Set(a.carIds || [])];
     for (const id of ids) {
-      const c = repairCost(s, owned(p, id));
+      const c = repairCost(s, owned(p, id), p);
       if (c == null) fail('Эту машину сейчас нельзя отремонтировать');
       total += c;
     }
     if (total > p.cash) fail('Не хватает денег');
     p.cash -= total;
-    for (const id of ids) { const car = owned(p, id); if (car.defect) s.defectDecks[s.catalog[car.id].deck].push(car.defect); car.repaired = true; car.defect = null; car.sellAsRepaired = false; }
+    for (const id of ids) { const car = owned(p, id); if (car.defect && s.defectDecks[car.defect.deck]) s.defectDecks[car.defect.deck].push(car.defect); car.repaired = true; car.defect = null; car.sellAsRepaired = false; car.hidden = false; }
     ev(s, { type: 'repaired', player: p.id, carIds: ids, total });
     nextTurn(s);
   },
@@ -518,7 +564,144 @@ const HANDLERS = {
     } else if (a.type !== 'race_keep') fail('Перебросить или оставить');
     raceResolve(s);
   },
+
+  // ---- Лотерея: карты с выбором ----
+  lot_sell(s, p, a) { // «Нашёл покупателя»: продать одну машину
+    if (a.type === 'lot_skip') return nextTurn(s);
+    if (a.type !== 'lot_sell') fail('Выберите машину или пропустите');
+    const car = owned(p, a.carId), price = sellPrice(s, car, p);
+    if (price == null) fail('Эту машину нельзя продать');
+    toBottom(s, car); p.cars = p.cars.filter((c) => c !== car); p.cash += price;
+    ev(s, { type: 'sold', player: p.id, carIds: [car.id], total: price });
+    nextTurn(s);
+  },
+  lot_insure(s, p, a) {
+    if (a.type === 'lot_insure') {
+      if (p.cash < INSURANCE_COST) fail('Не хватает денег');
+      p.cash -= INSURANCE_COST; p.insured = true;
+      ev(s, { type: 'insured', player: p.id, cost: INSURANCE_COST });
+    } else if (a.type !== 'lot_skip') fail('Застраховать или отказаться');
+    nextTurn(s);
+  },
+  lot_swap(s, p, a) { // «Обмен»: предложить другому игроку обмен машинами с доплатой
+    if (a.type === 'lot_skip') return nextTurn(s);
+    if (a.type !== 'swap_propose') fail('Предложите обмен или пропустите');
+    const q = s.players[a.target];
+    if (!q || q.id === p.id || q.eliminated) fail('Неверный игрок');
+    const mine = owned(p, a.carId), theirs = owned(q, a.theirCarId);
+    const vm = carValue(s, mine), vt = carValue(s, theirs);
+    const payer = vm < vt ? p.id : vt < vm ? q.id : null, diff = Math.abs(vm - vt);
+    if (payer != null && s.players[payer].cash < diff) fail((payer === p.id ? 'Вам' : 'Игроку ' + q.name) + ' не хватает денег на доплату');
+    s.swapOffer = { from: p.id, to: q.id, give: mine.id, take: theirs.id, payer, diff };
+    s.phase = 'swap_offer';
+    ev(s, { type: 'swap_offer', from: p.id, to: q.id, give: mine.id, take: theirs.id, payer, diff });
+  },
+  swap_offer(s, p, a) {
+    const O = s.swapOffer;
+    if (a.type === 'swap_decline') { ev(s, { type: 'swap_declined', player: p.id }); return nextTurn(s); }
+    if (a.type !== 'swap_accept') fail('Принять или отказаться');
+    const A = s.players[O.from], B = s.players[O.to];
+    const ca = owned(A, O.give), cb = owned(B, O.take);
+    if (O.payer != null) {
+      const payer = s.players[O.payer], getter = O.payer === A.id ? B : A;
+      if (payer.cash < O.diff) fail('Не хватает денег на доплату');
+      payer.cash -= O.diff; getter.cash += O.diff;
+    }
+    A.cars = A.cars.filter((c) => c !== ca); B.cars = B.cars.filter((c) => c !== cb);
+    A.cars.push(cb); B.cars.push(ca);
+    ev(s, { type: 'swap_done', from: A.id, to: B.id, give: ca.id, take: cb.id, payer: O.payer, diff: O.diff });
+    nextTurn(s);
+  },
+  evac(s, p, a) { // «Эвакуатор»: переехать на любую клетку и сыграть её
+    if (a.type === 'lot_skip') return nextTurn(s);
+    if (a.type !== 'evac') fail('Выберите клетку');
+    const to = a.cell;
+    if (!Number.isInteger(to) || to < 0 || to >= BOARD.length || to === p.pos) fail('Неверная клетка');
+    const cap = (s.playerCount || s.players.length) <= 4 ? 1 : 2;
+    if (s.players.filter((q) => q.id !== p.id && q.pos === to).length >= cap) fail('Клетка занята');
+    p.pos = to; s.phase = 'act';
+    ev(s, { type: 'evac', player: p.id, to, cell: BOARD[to] });
+  },
+  theft_pick(s, p, a) {
+    const T = s.theft;
+    if (a.type !== 'theft_pick' || !T.options.includes(a.carId)) fail('Выберите машину');
+    const v = s.players[T.victim], car = owned(v, a.carId);
+    v.cars = v.cars.filter((c) => c !== car); p.cars.push(car);
+    ev(s, { type: 'theft_done', player: p.id, victim: v.id, cardId: car.id });
+    nextTurn(s);
+  },
 };
+
+function familyTick(s, p) { // проход клетки Family: +10% к цене продажи каждой Family, максимум +30%
+  const cars = p.cars.filter((c) => s.catalog[c.id].deck === 'family' && (c.fam || 0) < FAMILY_MAX);
+  cars.forEach((c) => { c.fam = (c.fam || 0) + 1; });
+  if (cars.length) ev(s, { type: 'family_bonus', player: p.id, count: cars.length });
+}
+function drawFrom(s, key, template) { // бесконечные колоды Техосмотра и Лотереи
+  if (!s[key].length) s[key] = shuffle(s, template.map((x) => ({ ...x })));
+  return s[key].shift();
+}
+function inspection(s, p, cell) {
+  if (cell !== 'tehosmotr') fail('Это не Техосмотр');
+  if (!p.cars.length) fail('Нет машин');
+  const cost = INSPECT_PER_CAR * p.cars.length;
+  if (p.cash < cost) fail('Не хватает денег на Техосмотр');
+  p.cash -= cost;
+  const c = drawFrom(s, 'inspectDeck', INSPECT_TEMPLATE);
+  const e = { type: 'inspection', player: p.id, cost, card: c.kind, deck: c.deck || null };
+  if (c.kind === 'repair_bonus') p.repairBonusUntil = s.round + BONUS_ROUNDS;
+  else if (c.kind === 'sale_bonus') p.saleBonusUntil = s.round + BONUS_ROUNDS;
+  else if (p.insured) e.result = 'insured';
+  else {
+    const car = p.cars.filter((x) => s.catalog[x.id].deck === c.deck && x.repaired).sort((x, y) => s.catalog[x.id].sell - s.catalog[y.id].sell)[0];
+    if (!car) e.result = 'burned';
+    else {
+      car.repaired = false; car.hidden = true;
+      car.defect = takeDefect(s, 'vedro', (x) => x.kind === 'repair'); // скрытый дефект — всегда из колоды Economy
+      e.result = 'hidden'; e.cardId = car.id; e.defect = car.defect.name; e.defectCost = car.defect.repair.cost;
+    }
+  }
+  ev(s, e);
+  nextTurn(s);
+}
+function lottery(s, p, cell) {
+  if (cell !== 'lottery') fail('Это не Лотерея');
+  const c = drawFrom(s, 'lotteryDeck', LOTTERY_TEMPLATE);
+  const e = ev(s, { type: 'lottery', player: p.id, card: c.kind, amount: c.amount || 0, deck: c.deck || null });
+  const pay = (q, x) => { const v = Math.min(q.cash, x); q.cash -= v; return v; };
+  switch (c.kind) {
+    case 'win': p.cash += c.amount; break;
+    case 'buyer': if (p.cars.some((x) => sellPrice(s, x, p) != null)) { s.phase = 'lot_sell'; return; } break;
+    case 'insurance': if (!p.insured && p.cash >= INSURANCE_COST) { s.phase = 'lot_insure'; return; } e.result = p.insured ? 'already' : 'no_money'; break;
+    case 'swap': if (p.cars.length && s.players.some((q) => q.id !== p.id && !q.eliminated && q.cars.length)) { s.phase = 'lot_swap'; return; } break;
+    case 'dps': e.amount = pay(p, 100 * p.cars.filter(isBroken).length); break;
+    case 'evac': s.phase = 'evac'; return;
+    case 'tire': e.amount = pay(p, 100); break;
+    case 'birthday': e.amount = 0; for (const q of alive(s)) if (q.id !== p.id) { const v = pay(q, 100); p.cash += v; e.amount += v; } break;
+    case 'recall': {
+      const car = p.cars.find((x) => s.catalog[x.id].deck === c.deck && !x.repaired && !isUnrepairable(x));
+      if (car) { if (car.defect && s.defectDecks[car.defect.deck]) s.defectDecks[car.defect.deck].push(car.defect); car.repaired = true; car.defect = null; car.hidden = false; e.cardId = car.id; }
+      break;
+    }
+    case 'lux_tax': e.amount = pay(p, 200 * p.cars.filter((x) => s.catalog[x.id].deck === 'premium').length); break;
+    case 'expo': p.expo = true; break;
+  }
+  nextTurn(s);
+}
+function theft(s, p, cell) { // Угон: 5 — неотремонтированную Economy/Crash/Family, 6 — любого класса; у ближайшего игрока впереди
+  if (cell !== 'ugon') fail('Это не Угон');
+  const d = die(s), n = BOARD.length;
+  const ahead = alive(s).filter((q) => q.id !== p.id).map((q) => ({ q, dist: ((q.pos - p.pos + n) % n) || n })).sort((x, y) => x.dist - y.dist)[0];
+  const e = ev(s, { type: 'theft_roll', player: p.id, die: d, victim: ahead ? ahead.q.id : null });
+  if (d < 5 || !ahead) return nextTurn(s);
+  const v = ahead.q;
+  if (v.insured) { e.result = 'insured'; return nextTurn(s); }
+  const opts = v.cars.filter((c) => !c.repaired && (d === 6 || ['vedro', 'bitye', 'family'].includes(s.catalog[c.id].deck)))
+    .sort((x, y) => s.catalog[y.id].sell - s.catalog[x.id].sell).map((c) => c.id);
+  if (!opts.length) { e.result = 'nothing'; return nextTurn(s); }
+  s.theft = { victim: v.id, die: d, options: opts };
+  s.phase = 'theft_pick';
+}
 
 export function raceEligible(s) {
   const R = s.race;
@@ -573,10 +756,14 @@ function legal(s) {
     if (CELL_DECK[cell] && s.decks[CELL_DECK[cell]].length) out.push({ type: 'buy_start' });
     if (cell === 'avtopodbor') for (const d of Object.keys(s.decks)) if (s.decks[d].length) out.push({ type: 'buy_start', deck: d });
     if (cell === 'avtoservis' && p.cars.some((c) => !c.repaired && !isUnrepairable(c))) out.push({ type: 'autoservice' });
-    if (cell === 'skupka') {
-      const ids = p.cars.filter((c) => sellPrice(s, c) != null).map((c) => c.id);
-      if (ids.length) out.push({ type: 'sell', carIds: ids, quotes: Object.fromEntries(ids.map((id) => [id, sellPrice(s, owned(p, id))])) });
+    if (cell === 'perekup' || cell === 'dealer') {
+      const ids = p.cars.filter((c) => sellPrice(s, c, p) != null).map((c) => c.id);
+      if (ids.length) out.push({ type: 'sell', perekup: cell === 'perekup', max: cell === 'perekup' ? 1 : ids.length, carIds: ids, quotes: Object.fromEntries(ids.map((id) => [id, sellPrice(s, owned(p, id), p)])) });
     }
+    if (cell === 'tehosmotr' && p.cars.length && p.cash >= INSPECT_PER_CAR * p.cars.length) out.push({ type: 'inspection', cost: INSPECT_PER_CAR * p.cars.length });
+    if (cell === 'lottery') out.push({ type: 'lottery' });
+    if (cell === 'bank') out.push({ type: 'bank', gain: Math.round(p.cash * BANK_RATE) });
+    if (cell === 'ugon' && alive(s).length > 1) out.push({ type: 'theft' });
     if (cell === 'prokat' && p.cars.some((c) => c.repaired)) out.push({ type: 'rent' });
     if (cell.startsWith('gonka') && p.cars.length) out.push({ type: 'race_start' });
     for (const c of p.cars) if (c.defect && c.defect.kind === 'swap_pay') out.push({ type: 'swap_pay', carId: c.id });
@@ -602,6 +789,21 @@ function legal(s) {
     out.push({ type: 'race_roll' });
   } else if (s.phase === 'loan') {
     out.push({ type: 'loan_cancel' });
+  } else if (s.phase === 'lot_sell') {
+    for (const c of p.cars) { const v = sellPrice(s, c, p); if (v != null) out.push({ type: 'lot_sell', carId: c.id, price: v }); }
+    out.push({ type: 'lot_skip' });
+  } else if (s.phase === 'lot_insure') {
+    out.push({ type: 'lot_insure', cost: INSURANCE_COST }, { type: 'lot_skip' });
+  } else if (s.phase === 'lot_swap') {
+    out.push({ type: 'swap_propose' }, { type: 'lot_skip' });
+  } else if (s.phase === 'swap_offer') {
+    out.push({ type: 'swap_accept' }, { type: 'swap_decline' });
+  } else if (s.phase === 'evac') {
+    const cap = (s.playerCount || s.players.length) <= 4 ? 1 : 2;
+    for (let i = 0; i < BOARD.length; i++) if (i !== p.pos && s.players.filter((q) => q.id !== p.id && q.pos === i).length < cap) out.push({ type: 'evac', cell: i });
+    out.push({ type: 'lot_skip' });
+  } else if (s.phase === 'theft_pick') {
+    for (const id of s.theft.options) out.push({ type: 'theft_pick', carId: id });
   }
   return out;
 }
@@ -626,7 +828,7 @@ export function loanInfo(s, playerId) {
 
 export function repairCosts(s, playerId) { // цена ремонта по каждой машине игрока
   const out = {};
-  for (const c of s.players[playerId].cars) { const x = repairCost(s, c); if (x != null) out[c.id] = x; }
+  for (const c of s.players[playerId].cars) { const x = repairCost(s, c, s.players[playerId]); if (x != null) out[c.id] = x; }
   return out;
 }
 
@@ -643,6 +845,8 @@ export function timeoutStep(s) {
     act: p && p.cars.length ? { type: 'taxi', carId: [...p.cars].sort((x, y) => s.catalog[y.id].sell - s.catalog[x.id].sell)[0].id } : null, // такси на самой дорогой машине
     buy: { type: 'decline' }, auction: { type: 'auction_close' }, repair: { type: 'repair', carIds: [] },
     race_setup: { type: 'race_open' }, race_join: { type: 'race_close' }, race_roll: { type: 'race_roll' }, race_reroll: { type: 'race_keep' },
+    lot_sell: { type: 'lot_skip' }, lot_insure: { type: 'lot_skip' }, lot_swap: { type: 'lot_skip' }, evac: { type: 'lot_skip' },
+    swap_offer: { type: 'swap_decline' }, theft_pick: s.theft ? { type: 'theft_pick', carId: s.theft.options[0] } : null,
   }[s.phase];
   return applyAction(s, { ...a, player: who });
 }
@@ -663,5 +867,6 @@ export function publicView(s) {
   const v = structuredClone(s);
   v.deckCounts = Object.fromEntries(Object.entries(s.decks).map(([k, d]) => [k, d.length]));
   v.decks = undefined; v.defectDecks = undefined; v.defectTemplate = undefined; v.rng = undefined; v.forcedRolls = undefined;
+  v.inspectDeck = undefined; v.lotteryDeck = undefined;
   return v;
 }

@@ -13,10 +13,10 @@ h1{font-size:20px;margin:6px 0}
 button{font:inherit;background:var(--acc);color:#1c1b19;border:0;border-radius:8px;padding:8px 12px;margin:3px 4px 3px 0;cursor:pointer}
 button.sec{background:var(--line);color:var(--fg)}
 input,select{font:inherit;padding:7px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--fg);max-width:100%}
-.board{display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(4,minmax(64px,1fr));gap:4px}
+.board{display:grid;grid-template-columns:repeat(6,1fr);grid-template-rows:repeat(4,minmax(64px,1fr));gap:4px}
 .cell{border:1px solid var(--line);border-radius:8px;padding:4px;font-size:12px;background:var(--card);display:flex;flex-direction:column;justify-content:space-between;min-width:0}
 .cell.now{outline:3px solid var(--acc)}
-.mid{grid-row:2/4;grid-column:2/4;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:13px;color:var(--mut)}
+.mid{grid-row:2/4;grid-column:2/6;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;font-size:13px;color:var(--mut)}
 .tok{display:inline-block;width:20px;height:20px;border-radius:50%;color:#fff;font-size:11px;text-align:center;line-height:20px;margin-right:2px}
 .row{display:flex;gap:10px;flex-wrap:wrap}.row>*{flex:1 1 300px;min-width:0}
 .mut{color:var(--mut)}.bad{color:var(--bad)}
@@ -24,7 +24,9 @@ input,select{font:inherit;padding:7px;border:1px solid var(--line);border-radius
 .timer{font-weight:700;font-size:18px}
 .wide{overflow-x:auto}
 .chip{display:inline-block;padding:1px 8px;border-radius:10px;font-size:12px;margin:1px 2px 1px 0}
-.d-vedro{background:#fff;color:#111;border:1px solid #888}.d-bitye{background:#2a8a3e;color:#fff}.d-premium{background:#2a62c9;color:#fff}.d-retro{background:#c62828;color:#fff}
+.d-vedro{background:#fff;color:#111;border:1px solid #888}.d-bitye{background:#f08a24;color:#111}.d-family{background:#2a8a3e;color:#fff}.d-premium{background:#2a62c9;color:#fff}.d-retro{background:#c62828;color:#fff}
+.cell.c-vedro{border-top:5px solid #bbb}.cell.c-bitye{border-top:5px solid #f08a24}.cell.c-family{border-top:5px solid #2a8a3e}.cell.c-premium{border-top:5px solid #2a62c9}.cell.c-retro{border-top:5px solid #c62828}.cell.c-sp{border-top:5px solid var(--acc)}
+main{max-width:1280px}
 #dice{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);z-index:9}
 .die{width:110px;height:110px;border-radius:18px;background:#fff;color:#111;font:700 56px/110px system-ui;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.5)}
 .roll{animation:roll .9s ease-out}@keyframes roll{0%{transform:translateX(-180px) rotate(-540deg)}100%{transform:none}}
@@ -32,7 +34,7 @@ input,select{font:inherit;padding:7px;border:1px solid var(--line);border-radius
 .mc{display:flex;flex-direction:column;gap:3px;width:100%}.mcard{border:1px solid var(--line);border-radius:8px;padding:4px;background:var(--card);color:var(--fg);text-align:left;font-size:12px}.dcard{border-color:var(--bad)}
 .board{grid-template-rows:repeat(4,minmax(88px,1fr))}
 </style></head><body><main>
-<h1>🚗 Rust to Riches <span class="mut" style="font-size:13px">— онлайн</span></h1>
+<h1>🚗 Rust to Riches <span class="mut" style="font-size:13px">— от ржавого ведра до миллионера</span></h1>
 <div id="app"></div><div id="dice"></div>
 </main>
 <script>
@@ -40,14 +42,16 @@ input,select{font:inherit;padding:7px;border:1px solid var(--line);border-radius
 
 const $=(s)=>document.querySelector(s);
 const COL=['#d33','#27a','#2a5','#d80','#92c','#088'];
-const CN={skupka:'Скупка',vedro:'Эконом',avtoservis:'Автосервис',gonka_plus1:'Гонка +1',avtopodbor:'Автоподбор',bitye:'Средний класс',premium:'Люкс',gonka_reroll:'Гонка (переброс)',prokat:'Прокат',retro:'Классика'};
-const DN={vedro:'Эконом',bitye:'Средний класс',premium:'Люкс',retro:'Классика'};
-const GRID=[[4,4],[4,3],[4,2],[4,1],[3,1],[2,1],[1,1],[1,2],[1,3],[1,4],[2,4],[3,4]];
+const CN={dealer:'Дилер',vedro:'Economy',avtoservis:'Автосервис',gonka_reroll:'Гонка',avtopodbor:'Авторынок',lottery:'Лотерея',bitye:'Crash',tehosmotr:'Техосмотр',perekup:'Перекуп',family:'Family',premium:'Luxury',ugon:'Угон',prokat:'Прокат',retro:'Classic',bank:'Банк'};
+const CD={dealer:'продать все машины',vedro:'покупка',avtoservis:'ремонт',gonka_reroll:'переброс у организатора',avtopodbor:'любая колода',lottery:'карта удачи',bitye:'ремонт по кубику',tehosmotr:'100 € за машину',perekup:'продать 1 машину',family:'+10% за проход',premium:'покупка',ugon:'кубик 5–6',prokat:'только целые',retro:'только аукцион',bank:'+5% к наличным'};
+const DN={vedro:'Economy',bitye:'Crash',family:'Family',premium:'Luxury',retro:'Classic'};
+const GRID=[[4,1],[3,1],[2,1],[1,1],[1,2],[1,3],[1,4],[1,5],[1,6],[2,6],[3,6],[4,6],[4,5],[4,4],[4,3],[4,2]];
+const LOT={win:'Выигрыш в лотерею',buyer:'Нашёл покупателя',insurance:'Страховка',swap:'Обмен',dps:'Пост ДПС',evac:'Эвакуатор',tire:'Пробил колесо',birthday:'День рождения',recall:'Отзывная кампания',lux_tax:'Налог на роскошь',expo:'Выставка ретро'};
 const eur=(n)=>Number(n).toLocaleString('ru-RU')+' €';
-let ME=-1,ROOM='',TOKEN='',CAT=null,LOBBY=null,es=null,lastGains=[],G=null,logs=[],deadline=0,curKey='',paused=null,toast='',rt=-1,rs=100;
-function tkey(){const s=G;return s.phase==='move'?'m'+s.turn:s.phase==='auction'?'a'+s.auction.bid+'/'+s.auction.bidder:s.phase==='race_join'?'r'+s.turn:s.phase==='loan'?'l':'t'+s.turn}
-function secs(k){return k[0]==='m'?MOVE_SECONDS:k[0]==='a'?AUCTION_SECONDS:k[0]==='r'?RACE_JOIN_SECONDS:k[0]==='l'?LOAN_SECONDS:ACT_SECONDS}
-const TL={g:'Бросок кубика: ',m:'Выбор шагов: ',t:'Решение: ',a:'Аукцион: ',r:'Окно гонки: ',l:'Займ: '};
+let sw={t:-1},ME=-1,ROOM='',TOKEN='',CAT=null,LOBBY=null,es=null,lastGains=[],G=null,logs=[],deadline=0,curKey='',paused=null,toast='',rt=-1,rs=100;
+function tkey(){const s=G;return s.phase==='move'?'m'+s.turn:s.phase==='auction'?'a'+s.auction.bid+'/'+s.auction.bidder:s.phase==='race_join'?'r'+s.turn:s.phase==='loan'?'l':s.phase==='swap_offer'?'o'+s.turn:'t'+s.turn}
+function secs(k){return k[0]==='m'?MOVE_SECONDS:k[0]==='a'?AUCTION_SECONDS:k[0]==='r'?RACE_JOIN_SECONDS:k[0]==='l'||k[0]==='o'?LOAN_SECONDS:ACT_SECONDS}
+const TL={g:'Бросок кубика: ',m:'Выбор шагов: ',t:'Решение: ',a:'Аукцион: ',r:'Окно гонки: ',l:'Займ: ',o:'Ответ на обмен: '};
 
 function nm(i){return G.players[i].name}
 function cn(id){return G.catalog[id].name}
@@ -57,13 +61,13 @@ case 'moved':return n(e.player)+' идёт на '+e.steps+(e.cost?' (−'+eur(e.
 case 'revealed':return 'Открыта карта: '+cn(e.cardId);
 case 'bought':return n(e.player)+' купил «'+cn(e.cardId)+'» за '+eur(e.price);
 case 'car_gained':{const k=G.catalog[e.cardId];return n(e.player)+' получает '+chip(e.cardId)+' · продажа '+eur(k.sell)+' · '+rep(k,e.defect,e.defectCost)}
-case 'swap':return n(e.player)+': обмен «'+cn(e.from)+'» на две машины «Эконом»';
+case 'swap':return n(e.player)+': обмен «'+cn(e.from)+'» на две машины Economy';
 case 'auction_started':return n(e.player)+' объявил аукцион, ставка '+eur(e.bid);
 case 'bid':return n(e.player)+' ставит '+eur(e.amount);
 case 'auction_pass':return n(e.player)+' пас';
 case 'auction_won':return n(e.player)+' выигрывает «'+cn(e.cardId)+'» за '+eur(e.price);
 case 'discarded':return 'Карта «'+cn(e.cardId)+'» ушла вниз колоды';
-case 'repair_roll':return e.die?'Куб для «Средний класс»: '+e.die:'Автосервис';
+case 'repair_roll':return e.die?'Куб для Crash: '+e.die:'Автосервис';
 case 'repaired':return n(e.player)+' починил '+e.carIds.length+' шт. за '+eur(e.total);
 case 'sold':return n(e.player)+' продал машины на '+eur(e.total);
 case 'rent':return n(e.player)+' получает за прокат '+eur(e.total);
@@ -86,6 +90,17 @@ case 'loan_repaid':return n(e.borrower)+' возвращает '+n(e.lender)+' '
 case 'loan_forced':return n(e.borrower)+' принудительно возвращает '+eur(e.amount)+' → '+n(e.lender);
 case 'swap_pay':return n(e.player)+': обмен с доплатой '+eur(e.diff);
 case 'eliminated':return n(e.player)+' выбывает из-за долга';
+case 'bank':return n(e.player)+' в Банке: +'+eur(e.gain);
+case 'family_bonus':return n(e.player)+' проезжает Family: +10% к цене ('+e.count+' шт.)';
+case 'inspection':return n(e.player)+' на Техосмотре (−'+eur(e.cost)+'): '+(e.card==='repair_bonus'?'−10% на ремонт на 2 круга':e.card==='sale_bonus'?'+10% к продаже на 2 круга':e.result==='insured'?'скрытый дефект '+DN[e.deck]+' — защитила страховка':e.result==='burned'?'скрытый дефект '+DN[e.deck]+' — машины такого класса нет, карта сгорела':'скрытый дефект «'+e.defect+'» на '+cn(e.cardId)+', ремонт '+eur(e.defectCost));
+case 'lottery':return n(e.player)+' тянет Лотерею: '+LOT[e.card]+(e.card==='win'?' +'+eur(e.amount):['dps','tire','lux_tax'].includes(e.card)?' −'+eur(e.amount):e.card==='birthday'?' +'+eur(e.amount):e.deck?' ('+DN[e.deck]+(e.cardId?': '+cn(e.cardId)+' починена бесплатно':', подходящей машины нет')+')':'');
+case 'insured':return n(e.player)+' застраховал все машины до конца игры (−'+eur(e.cost)+')';
+case 'swap_offer':return n(e.from)+' предлагает '+n(e.to)+' обмен: «'+cn(e.give)+'» на «'+cn(e.take)+'»'+(e.payer!=null?', доплата '+eur(e.diff)+' платит '+n(e.payer):'');
+case 'swap_done':return 'Обмен состоялся: '+n(e.from)+' ⇄ '+n(e.to);
+case 'swap_declined':return n(e.player)+' отказался от обмена';
+case 'evac':return n(e.player)+' на эвакуаторе → '+CN[e.cell];
+case 'theft_roll':return n(e.player)+' на Угоне: куб '+e.die+(e.die<5?' — неудача':e.result==='insured'?' — у жертвы страховка':e.result==='nothing'?' — угонять нечего':'');
+case 'theft_done':return n(e.player)+' угоняет у '+n(e.victim)+' «'+cn(e.cardId)+'»';
 case 'win':return '🏆 Победитель: '+n(e.player);
 default:return e.type}}
 
@@ -117,15 +132,15 @@ function lobby(msg){const app=$('#app');
 async function act(a){const r=await api('/api/action',{room:ROOM,token:TOKEN,action:a});if(r.error){toast=r.error;render()}}
 const actAs=(p,a)=>act(a);
 
-const val=(c)=>{const k=G.catalog[c.id];return(c.defect&&c.defect.kind==='unrepairable'&&!c.repaired)?k.auction_start:k.sell};
+const val=(c)=>sellPrice(G,c);
 const chip=(id)=>{const k=G.catalog[id];return '<span class="chip d-'+k.deck+'">'+k.name+'</span>'};
-function rep(k,dn,dc){if(k.deck==='bitye')return 'ремонт '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')+' (куб 1–2 / 3–4 / 5–6)';if(k.deck==='retro')return 'реставрация '+eur(k.repair.cost);return dn?('дефект «'+dn+'»'+(dc?', ремонт '+eur(dc):' — не ремонтируется')):'ремонт по дефекту'}
-function carLabel(c){return chip(c.id)+(c.repaired?' ✓':c.defect?' ('+c.defect.name+')':'')+' → '+eur(val(c))}
+function rep(k,dn,dc){if(k.deck==='family')return 'без дефекта · +10% за проход клетки Family, до +30%';if(k.deck==='bitye')return 'ремонт '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')+' (куб 1–2 / 3–4 / 5–6)';if(k.deck==='retro')return 'реставрация '+eur(k.repair.cost);return dn?('дефект «'+dn+'»'+(dc?', ремонт '+eur(dc):' — не ремонтируется')):'ремонт по дефекту'}
+function carLabel(c){return chip(c.id)+(c.fam?' +'+c.fam*10+'%':'')+(c.repaired?' ✓':c.defect?' ('+(c.hidden?'скрытый: ':'')+c.defect.name+')':' (не отремонтирована)')+' → '+eur(val(c))+(c.repaired||c.sellAsRepaired||(c.defect&&['buyer','unrepairable'].includes(c.defect.kind))?'':' <span class="bad">(−50%)</span>')}
 function cardPanel(id,d,title){const c=G.catalog[id];
  let x='<div class="mc"><div><b>'+(title||'Открытая карта')+'</b></div><div class="mcard"><span class="chip d-'+c.deck+'">'+DN[c.deck]+'</span> <b>'+c.name+'</b><br>'+(c.buy!=null?'Покупка '+eur(c.buy)+' · ':'Только аукцион · ')+'старт '+eur(c.auction_start)+'<br>Продажа '+eur(c.sell)+'<br>'+rep(c)+'</div>';
  if(d)x+='<div class="mcard dcard"><b>Дефект: '+d.name+'</b><br>'+(d.cost?'Ремонт '+eur(d.cost):(d.text||'не ремонтируется'))+'</div>';
  return x+'</div>'}
-function showDice(evs){const L=[];evs.forEach(e=>{if(e.type==='race_roll')L.push([nm(e.player)+(e.tie?' (перебросок)':''),e.die]);else if(e.type==='race_reroll')L.push([nm(e.player)+' (переброс)',e.die]);else if(e.type==='taxi')L.push([nm(e.player)+' · такси',e.die]);else if(e.type==='repair_roll'&&e.die)L.push(['Куб ремонта «Средний класс»',e.die])});
+function showDice(evs){const L=[];evs.forEach(e=>{if(e.type==='race_roll')L.push([nm(e.player)+(e.tie?' (перебросок)':''),e.die]);else if(e.type==='theft_roll')L.push([nm(e.player)+' · Угон',e.die]);else if(e.type==='race_reroll')L.push([nm(e.player)+' (переброс)',e.die]);else if(e.type==='taxi')L.push([nm(e.player)+' · такси',e.die]);else if(e.type==='repair_roll'&&e.die)L.push(['Куб ремонта Crash',e.die])});
  const el=$('#dice');let i=0;(function step(){if(i>=L.length){el.style.display='none';return}const w=L[i][0],v=L[i][1];i++;el.style.display='flex';el.innerHTML='<div style="text-align:center;color:#fff"><div style="margin-bottom:10px;font-size:18px">'+w+'</div><div class="die roll">?</div></div>';const d=el.querySelector('.die');let k=0;const iv=setInterval(()=>{d.textContent=1+Math.floor(Math.random()*6);if(++k>9){clearInterval(iv);d.textContent=v}},60);setTimeout(step,1700)})()}
 
 function controls(){
@@ -136,7 +151,11 @@ if(s.phase==='act'){
  acts.forEach(a=>{const j=(o)=>JSON.stringify(o).replace(/'/g,'&#39;');
   if(a.type==='buy_start')h.push(`<button data-a='${j({type:'buy_start',deck:a.deck})}'>Купить${a.deck?' из «'+DN[a.deck]+'»':''}</button>`);
   if(a.type==='autoservice')h.push(`<button data-a='${j({type:'autoservice'})}'>Ремонт</button>`);
-  if(a.type==='sell'){h.push('<p>Что продать (отметьте машины):</p>');a.carIds.forEach(id=>{const c=p.cars.find(x=>x.id===id);h.push(`<label style="display:block"><input type="checkbox" class="sc" value="${id}" data-v="${a.quotes[id]}"> ${chip(id)}${c.repaired?' ✓':''} → <b>${eur(a.quotes[id])}</b></label>`)});h.push('<p>Итого: <b id="st">0 €</b></p><button data-sell="1">Продать выбранные</button>')}
+  if(a.type==='sell'){const one=!!a.perekup;h.push('<p>'+(one?'Перекуп: выберите <b>одну</b> машину.':'Дилер: отметьте машины для продажи.')+' Неотремонтированные — за 50%.</p>');a.carIds.forEach(id=>{const c=p.cars.find(x=>x.id===id);h.push(`<label style="display:block"><input type="${one?'radio':'checkbox'}" name="sc" class="sc" value="${id}" data-v="${a.quotes[id]}"> ${chip(id)}${c.fam?' +'+c.fam*10+'%':''}${c.repaired||c.sellAsRepaired?' ✓':' <span class="bad">(не отремонтирована, −50%)</span>'} → <b>${eur(a.quotes[id])}</b></label>`)});h.push('<p>Итого: <b id="st">0 €</b></p><button data-sell="1">Продать выбранные</button>')}
+  if(a.type==='inspection')h.push(`<button data-a='${j({type:'inspection'})}'>Пройти техосмотр (${eur(a.cost)})</button>`);
+  if(a.type==='lottery')h.push(`<button data-a='${j({type:'lottery'})}'>Тянуть карту Лотереи</button>`);
+  if(a.type==='bank')h.push(`<button data-a='${j({type:'bank'})}'>Получить в Банке +${eur(a.gain)}</button>`);
+  if(a.type==='theft')h.push(`<button data-a='${j({type:'theft'})}'>Угон: бросить кубик</button>`);
   if(a.type==='rent')h.push(`<button data-a='${j({type:'rent'})}'>Сдать в прокат</button>`);
   if(a.type==='race_start')h.push(`<button data-a='${j({type:'race_start'})}'>Начать гонку</button>`);
   if(a.type==='swap_pay')Object.keys(s.decks).filter(d=>s.decks[d].length).forEach(d=>h.push(`<button class="sec" data-a='${j({type:'swap_pay',carId:a.carId,deck:d})}'>Обмен «${cn(a.carId)}» → ${DN[d]}</button>`));
@@ -158,6 +177,14 @@ if(s.phase==='race_setup'){const others=s.players.filter(q=>q.id!==p.id&&!q.elim
  if(others.length&&p.cash>=100){if(!others.some(q=>q.id===rt))rt=others[0].id;const T=s.players[rt],mx=Math.floor(Math.min(T.cash/2,p.cash)/100)*100;rs=Math.max(100,Math.min(rs,mx));
   h.push(`<p>Вызвать: <select id="tg">${others.map(q=>`<option value="${q.id}" ${q.id===rt?'selected':''}>${q.name} (${eur(q.cash)})</option>`).join('')}</select><br>Взнос: <button class="sec" data-st="-100">−100</button><b> ${eur(rs)} </b><button class="sec" data-st="100">+100</button> <span class="mut">максимум ${eur(mx)}: не больше половины денег соперника и ваших</span><br><button data-ch="1">Вызвать на гонку</button></p>`)}}
 if(s.phase==='race_join'){const el=raceEligible(s).includes(ME);h.push(`<p>Гонка: взнос ${eur(s.race.stake)}, фонд ${eur(s.race.pot)}. Участники: ${s.race.participants.map(nm).join(', ')}. Присоединиться может любой игрок (30 с).</p>`+(el?`<button data-a='{"type":"race_join"}'>Вступить (${eur(s.race.stake)})</button>`:'')+(s.current===ME?`<button class="sec" data-a='{"type":"race_close"}'>Начать гонку</button>`:''))}
+const jj=(o)=>JSON.stringify(o).replace(/'/g,'&#39;');
+if(s.phase==='lot_sell'){h.push('<p>Нашёл покупателя: выберите машину для продажи.</p>');has('lot_sell').forEach(a=>{const c=p.cars.find(x=>x.id===a.carId);h.push(`<button data-a='${jj({type:'lot_sell',carId:a.carId})}'>${cn(a.carId)} → ${eur(a.price)}</button>`)});h.push(`<button class="sec" data-a='{"type":"lot_skip"}'>Не продавать</button>`)}
+if(s.phase==='lot_insure')h.push(`<p>Страховка всех машин до конца игры за ${eur(INSURANCE_COST)}: защищает от Угона и скрытого дефекта.</p><button data-a='{"type":"lot_insure"}'>Застраховать</button><button class="sec" data-a='{"type":"lot_skip"}'>Отказаться</button>`);
+if(s.phase==='evac'){h.push('<p>Эвакуатор: выберите клетку, куда переехать.</p>');has('evac').forEach(a=>h.push(`<button class="sec" data-a='${jj({type:'evac',cell:a.cell})}'>${CN[BOARD[a.cell]]}</button>`));h.push(`<button class="sec" data-a='{"type":"lot_skip"}'>Остаться</button>`)}
+if(s.phase==='theft_pick'){h.push('<p>Угон удался! Выберите машину у '+nm(s.theft.victim)+':</p>');has('theft_pick').forEach(a=>h.push(`<button data-a='${jj({type:'theft_pick',carId:a.carId})}'>${cn(a.carId)}</button>`))}
+if(s.phase==='lot_swap'){const others=s.players.filter(q=>q.id!==p.id&&!q.eliminated&&q.cars.length);if(!others.some(q=>q.id===sw.t))sw.t=others[0].id;const T=s.players[sw.t];
+ h.push(`<p>Обмен: машины оцениваются как цена − ремонт, разницу доплачивает владелец более дешёвой.</p><p>Моя: <select id="sw1">${p.cars.map(c=>`<option value="${c.id}">${cn(c.id)} (${eur(carValue(s,c))})</option>`).join('')}</select> ⇄ игрок <select id="swt">${others.map(q=>`<option value="${q.id}" ${q.id===sw.t?'selected':''}>${q.name}</option>`).join('')}</select> машина <select id="sw2">${T.cars.map(c=>`<option value="${c.id}">${cn(c.id)} (${eur(carValue(s,c))})</option>`).join('')}</select></p><button data-swp="1">Предложить обмен</button><button class="sec" data-a='{"type":"lot_skip"}'>Не меняться</button>`)}
+if(s.phase==='swap_offer'){const O=s.swapOffer;h.push(`<p><b>${nm(O.from)}</b> предлагает обмен: его «${cn(O.give)}» на вашу «${cn(O.take)}»${O.payer!=null?`. Доплата ${eur(O.diff)} — платит ${O.payer===ME?'вы':nm(O.payer)}`:''}.</p><button data-a='{"type":"swap_accept"}'>Согласиться</button><button class="sec" data-a='{"type":"swap_decline"}'>Отказаться</button>`)}
 if(s.phase==='race_roll')h.push('<p>Ваш бросок в гонке (15 с, иначе кубик бросится сам).</p><button data-a=\'{"type":"race_roll"}\'>Бросить кубик</button>');
 if(s.phase==='race_reroll')h.push(`<p>Организатор может перебросить куб (максимум из двух).</p><button data-a='{"type":"race_reroll"}'>Перебросить</button><button class="sec" data-a='{"type":"race_keep"}'>Оставить</button>`);
 return h.join('')}
@@ -167,9 +194,9 @@ if(!G)return lobby();
 const s=G;
 const cur=s.players[actor(s)]||s.players[s.current];
 let b='';
-GRID.forEach((g,i)=>{b+=`<div class="cell ${s.players[s.current].pos===i?'now':''}" style="grid-row:${g[0]};grid-column:${g[1]}"><b>${CN[BOARD[i]]}</b><span>${s.players.filter(q=>q.pos===i).map(q=>`<span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span>`).join('')}</span></div>`});
+GRID.forEach((g,i)=>{const k=BOARD[i];b+=`<div class="cell ${DN[k]?'c-'+k:'c-sp'} ${s.players[s.current].pos===i?'now':''}" style="grid-row:${g[0]};grid-column:${g[1]}" title="${CN[k]}: ${CD[k]}"><b>${CN[k]}</b><span class="mut" style="font-size:11px">${CD[k]}</span><span>${s.players.filter(q=>q.pos===i).map(q=>`<span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span>`).join('')}</span></div>`});
 b+=`<div class="mid"><div class="timer" id="tm"></div><div>Круг ${s.round} · цель ${eur(s.goal)}</div><div>${Object.entries(s.decks).map(([k,v])=>DN[k]+': '+v.length).join(' · ')}</div>%%PANEL%%</div>`;
-let side=s.players.map(q=>`<div class="card" style="${q.id===s.current?'border-color:var(--acc)':''}${q.eliminated?';opacity:.5':''}"><span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span><b>${q.name}</b> — ${eur(q.cash)}${q.eliminated?' (выбыл)':''}<div class="mut">${q.cars.map(carLabel).join('<br>')||'нет машин'}</div>${q.cars.length?'<div><b>≈ при продаже: '+eur(q.cars.reduce((t,c)=>t+val(c),0))+'</b></div>':''}${s.loans.filter(l=>l.borrower===q.id).map(l=>`<div class="bad">Долг ${nm(l.lender)}: ${eur(loanDue(s,l))}${s.round-l.startRound>=5?' <b>⚠ СРОЧНО верните: на следующем круге заберут машину</b>':''}</div>`).join('')}</div>`).join('');
+let side=s.players.map(q=>`<div class="card" style="${q.id===s.current?'border-color:var(--acc)':''}${q.eliminated?';opacity:.5':''}"><span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span><b>${q.name}</b> — ${eur(q.cash)}${q.eliminated?' (выбыл)':''}${q.insured?' 🛡':''}${q.saleBonusUntil>s.round?' <span class="chip" style="background:#e3f1e6">+10% продажа</span>':''}${q.repairBonusUntil>s.round?' <span class="chip" style="background:#e3f1e6">−10% ремонт</span>':''}${q.expo?' <span class="chip" style="background:#fde">выставка ретро</span>':''}<div class="mut">${q.cars.map(carLabel).join('<br>')||'нет машин'}</div>${q.cars.length?'<div><b>≈ при продаже: '+eur(q.cars.reduce((t,c)=>t+val(c),0))+'</b></div>':''}${s.loans.filter(l=>l.borrower===q.id).map(l=>`<div class="bad">Долг ${nm(l.lender)}: ${eur(loanDue(s,l))}${s.round-l.startRound>=5?' <b>⚠ СРОЧНО верните: на следующем круге заберут машину</b>':''}</div>`).join('')}</div>`).join('');
 let top;
 if(s.phase==='over')top=`<h2>🏆 Победил ${nm(s.winner)}!</h2><button id="again">В меню</button>`;
 else{
@@ -177,7 +204,7 @@ else{
  if(s.phase==='loan'){const R=s.loanReq;loan='<p><b>'+nm(R.borrower)+'</b> просит в долг '+eur(R.amount)+'. 15 с на ответ.</p>'+(ME===R.borrower?'<button class="sec" data-a=\'{"type":"loan_cancel"}\'>Отмена</button>':(li.canAccept?'<button data-a=\'{"type":"loan_accept"}\'>Дать в долг '+eur(R.amount)+'</button>':'<span class="mut">У вас недостаточно денег</span>'))}
  else{if(li.canRequest)loan+=`<p class="mut">Не хватает денег? <input id="la" type="number" value="500" step="100" style="width:90px"><button class="sec" data-loan="1">Попросить в долг</button></p>`;
   li.repayable.forEach(r=>{if(r.roundsLeft===0)loan+='<div class="bad"><b>⚠ Срочно верните долг '+nm(r.lender)+': '+eur(r.due)+'. На следующем круге у вас заберут машину.</b></div>';loan+=`<button class="sec" data-rep-loan="${r.loanId}">Вернуть ${nm(r.lender)}: ${eur(r.due)} (до взыскания машины: ${r.roundsLeft+1} кр.)</button>`})}
- top=`<div>Ходит: <span class="tok" style="background:${COL[cur.id]}">${cur.name[0]}</span><b>${cur.name}</b> · ${eur(cur.cash)}</div>${toast?`<div class="bad">${toast}</div>`:''}<div>${s.phase==='loan'?'':((['auction','race_join'].includes(s.phase)||actor(s)===ME)?controls():'<p class="mut">Ждём ход игрока '+cur.name+'…</p>')}${loan}</div>`}
+ top=`<div>Ходит: <span class="tok" style="background:${COL[cur.id]}">${cur.name[0]}</span><b>${cur.name}</b> · ${eur(cur.cash)} · клетка: <b>${CN[BOARD[s.players[s.current].pos]]||'—'}</b></div>${toast?`<div class="bad">${toast}</div>`:''}<div>${s.phase==='loan'?'':((['auction','race_join'].includes(s.phase)||actor(s)===ME)?controls():'<p class="mut">Ждём ход игрока '+cur.name+'…</p>')}${loan}</div>`}
 const panel=(s.phase==='buy'&&s.pending)?cardPanel(s.pending.cardId):(s.phase==='auction'&&s.auction)?cardPanel(s.auction.cardId):lastGains.map(g=>cardPanel(g.cardId,g.defect?{name:g.defect,cost:g.defectCost,text:g.defectText}:null,'Получено: '+nm(g.player))).join('');
 $('#app').innerHTML=`<div class="card">${top}</div><div class="row"><div><div class="board">${b.replace('%%PANEL%%',panel)}</div></div><div>${side}</div></div><div class="card log">${logs.slice(0,60).map(l=>'<div>'+l+'</div>').join('')}</div>`;
 document.querySelectorAll('[data-a]').forEach(e=>e.onclick=()=>act(JSON.parse(e.dataset.a)));
@@ -195,6 +222,8 @@ q('[data-loan]',()=>act({type:'loan_request',amount:+$('#la').value}));
 document.querySelectorAll('[data-lend]').forEach(e=>e.onclick=()=>actAs(+e.dataset.lend,{type:'loan_accept'}));
 document.querySelectorAll('[data-rep-loan]').forEach(e=>e.onclick=()=>act({type:'repay_loan',loanId:+e.dataset.repLoan}));
 document.querySelectorAll('.sc').forEach(e=>e.onchange=()=>{let x=0;document.querySelectorAll('.sc:checked').forEach(y=>x+=+y.dataset.v);$('#st').textContent=eur(x)});
+q('[data-swp]',()=>act({type:'swap_propose',carId:$('#sw1').value,target:+$('#swt').value,theirCarId:$('#sw2').value}));
+const swt=$('#swt');if(swt)swt.onchange=()=>{sw.t=+swt.value;render()};
 q('[data-sell]',()=>act({type:'sell',carIds:[...document.querySelectorAll('.sc:checked')].map(e=>e.value)}));
 q('#again',leave)}
 

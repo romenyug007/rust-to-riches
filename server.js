@@ -18,8 +18,8 @@ const code = () => { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let c; do { c = Array
 
 // ---------- таймеры (те же правила, что в интерфейсе) ----------
 const tkey = (s) => s.phase === 'move' ? 'm' + s.turn : s.phase === 'auction' ? 'a' + s.auction.bid + '/' + s.auction.bidder
-  : s.phase === 'race_join' ? 'r' + s.turn : s.phase === 'race_roll' ? 'g' + s.turn + '/' + s.race.queue[0] + '/' + s.race.round : s.phase === 'loan' ? 'l' : 't' + s.turn;
-const secs = (k) => ({ m: E.MOVE_SECONDS, a: E.AUCTION_SECONDS, r: E.RACE_JOIN_SECONDS, g: E.RACE_ROLL_SECONDS, l: E.LOAN_SECONDS }[k[0]] ?? E.ACT_SECONDS);
+  : s.phase === 'race_join' ? 'r' + s.turn : s.phase === 'race_roll' ? 'g' + s.turn + '/' + s.race.queue[0] + '/' + s.race.round : s.phase === 'loan' ? 'l' : s.phase === 'swap_offer' ? 'o' + s.turn : 't' + s.turn;
+const secs = (k) => ({ m: E.MOVE_SECONDS, a: E.AUCTION_SECONDS, r: E.RACE_JOIN_SECONDS, g: E.RACE_ROLL_SECONDS, l: E.LOAN_SECONDS, o: E.LOAN_SECONDS }[k[0]] ?? E.ACT_SECONDS);
 function arm(room) {
   const s = room.state;
   if (s.phase === 'over') { room.deadline = 0; return; }
@@ -49,7 +49,7 @@ function doTimeout(room) {
 
 // ---------- рассылка ----------
 function mask(s) { // клиент не видит порядок колод: только количество карт
-  const { catalog, defectTemplate, rng, forcedRolls, log, decks, defectDecks, ...rest } = s;
+  const { catalog, defectTemplate, rng, forcedRolls, log, decks, defectDecks, inspectDeck, lotteryDeck, ...rest } = s;
   const v = structuredClone(rest);
   const nulls = (o) => Object.fromEntries(Object.entries(o).map(([k, d]) => [k, d.map(() => null)]));
   v.decks = nulls(decks); v.defectDecks = nulls(defectDecks);

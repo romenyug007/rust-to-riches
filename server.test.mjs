@@ -53,7 +53,7 @@ test('комната: создание, вход по коду, имена оч�
 test('игра: клиенты получают состояние без порядка колод, каталог приходит один раз', async () => {
   const g = await newGame(3);
   const d = g.first[0];
-  assert.equal(d.phase, 'game'); assert.ok(d.catalog && Object.keys(d.catalog).length === 83);
+  assert.equal(d.phase, 'game'); assert.ok(d.catalog && Object.keys(d.catalog).length === 99);
   assert.ok(Object.values(d.state.decks).every((a) => a.every((x) => x === null)));
   assert.equal(d.state.rng, undefined);
   assert.equal(d.events[0].type, 'game_start');

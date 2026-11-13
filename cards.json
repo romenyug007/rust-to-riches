@@ -1095,6 +1095,198 @@
     "cost": 6000
    },
    "auction_only": true
+  },
+  {
+   "id": "family-1",
+   "deck": "family",
+   "num": 1,
+   "name": "Волгарь",
+   "buy": 1500,
+   "sell": 1500,
+   "auction_start": 1050,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-2",
+   "deck": "family",
+   "num": 2,
+   "name": "Фокусник",
+   "buy": 1600,
+   "sell": 1600,
+   "auction_start": 1120,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-3",
+   "deck": "family",
+   "num": 3,
+   "name": "Фью",
+   "buy": 1650,
+   "sell": 1650,
+   "auction_start": 1160,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-4",
+   "deck": "family",
+   "num": 4,
+   "name": "Фабка",
+   "buy": 1700,
+   "sell": 1700,
+   "auction_start": 1190,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-5",
+   "deck": "family",
+   "num": 5,
+   "name": "Октаха",
+   "buy": 1800,
+   "sell": 1800,
+   "auction_start": 1260,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-6",
+   "deck": "family",
+   "num": 6,
+   "name": "Пасс",
+   "buy": 1900,
+   "sell": 1900,
+   "auction_start": 1330,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-7",
+   "deck": "family",
+   "num": 7,
+   "name": "Инсигна",
+   "buy": 2000,
+   "sell": 2000,
+   "auction_start": 1400,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-8",
+   "deck": "family",
+   "num": 8,
+   "name": "508",
+   "buy": 2000,
+   "sell": 2000,
+   "auction_start": 1400,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-9",
+   "deck": "family",
+   "num": 9,
+   "name": "Малибушка",
+   "buy": 2100,
+   "sell": 2100,
+   "auction_start": 1470,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-10",
+   "deck": "family",
+   "num": 10,
+   "name": "Камрюха",
+   "buy": 2300,
+   "sell": 2300,
+   "auction_start": 1610,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-11",
+   "deck": "family",
+   "num": 11,
+   "name": "004",
+   "buy": 2400,
+   "sell": 2400,
+   "auction_start": 1680,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-12",
+   "deck": "family",
+   "num": 12,
+   "name": "Класс C",
+   "buy": 2500,
+   "sell": 2500,
+   "auction_start": 1750,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-13",
+   "deck": "family",
+   "num": 13,
+   "name": "Джулия",
+   "buy": 2800,
+   "sell": 2800,
+   "auction_start": 1960,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-14",
+   "deck": "family",
+   "num": 14,
+   "name": "005",
+   "buy": 3000,
+   "sell": 3000,
+   "auction_start": 2100,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-15",
+   "deck": "family",
+   "num": 15,
+   "name": "Класс E",
+   "buy": 3100,
+   "sell": 3100,
+   "auction_start": 2170,
+   "repair": {
+    "type": "none"
+   }
+  },
+  {
+   "id": "family-16",
+   "deck": "family",
+   "num": 16,
+   "name": "006",
+   "buy": 3300,
+   "sell": 3300,
+   "auction_start": 2310,
+   "repair": {
+    "type": "none"
+   }
   }
  ],
  "defects": {
@@ -1230,12 +1422,6 @@
     "kind": "swap",
     "name": "Обмен",
     "text": "Немедленно поменяй эту тачку на 2 тачки из колоды «Эконом» и возьми 2 дефекта."
-   },
-   {
-    "deck": "vedro",
-    "kind": "swap_pay",
-    "name": "Обмен с доплатой",
-    "text": "Поменяй эту тачку на тачку из любой колоды, доплатив разницу покупки (цена «Классика» ×2). Если денег не хватает, попробуй в другой ход."
    },
    {
     "deck": "vedro",

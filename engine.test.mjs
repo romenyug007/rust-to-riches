@@ -16,6 +16,7 @@ const bad = (s, a) => { const r = applyAction(s, { player: actor(s), ...a }); as
 // поставить текущего игрока на клетку заданного типа и перевести в фазу действия
 function at(s, cell, idx = 0) { s = structuredClone(s); const i = BOARD.indexOf(cell) + idx; s.players[s.current].pos = BOARD.indexOf(cell, idx ? BOARD.indexOf(cell) + 1 : 0); s.phase = 'act'; return s; }
 const car = (s, id, repaired = true, defect = null) => ({ id, repaired, defect, sellAsRepaired: false });
+const keep = (s) => (s.phase === 'race_reroll' ? ok(s, { type: 'race_keep' }) : s); // клетка гонки — с перебросом
 
 test('старт: 1500 €, у каждого одна машина «Ведро» с ремонтируемым дефектом', () => {
   const s = mk(4);
@@ -152,22 +153,72 @@ test('автосервис: «Ведро» чинится по цене дефе
   assert.ok(s.players[p].cars.every((c) => c.repaired && c.defect === null));
 });
 
-test('скупка: продажа отремонтированной по зелёной цене; неремонтируемый «Премиум» — по аукционной', () => {
-  let s = at(mk(2), 'skupka'); const p = s.current;
+test('дилер: целая — по карте, неремонтируемый Luxury — по аукционной, неотремонтированная — 50%', () => {
+  let s = at(mk(2), 'dealer'); const p = s.current;
   const bad1 = { kind: 'unrepairable', name: 'Распил' };
   s.players[p].cars = [car(s, 'vedro-1', true), car(s, 'premium-3', false, bad1), car(s, 'vedro-2', false, { kind: 'repair', repair: { cost: 300 } })];
   const cash = s.players[p].cash;
-  assert.match(bad(s, { type: 'sell', carIds: ['vedro-2'] }), /нельзя продать/);
-  s = ok(s, { type: 'sell', carIds: ['vedro-1', 'premium-3'] });
-  assert.equal(s.players[p].cash - cash, s.catalog['vedro-1'].sell + s.catalog['premium-3'].auction_start);
-  assert.equal(s.players[p].cars.length, 1);
+  s = ok(s, { type: 'sell', carIds: ['vedro-1', 'premium-3', 'vedro-2'] });
+  assert.equal(s.players[p].cash - cash, s.catalog['vedro-1'].sell + s.catalog['premium-3'].auction_start + Math.round(s.catalog['vedro-2'].sell / 20) * 10);
+  assert.equal(s.players[p].cars.length, 0);
 });
 
-test('прокат: 500 € за Ведро/Битьё, 1000 € за Премиум/Ретро, только отремонтированные', () => {
+test('перекуп: продать можно только одну машину', () => {
+  let s = at(mk(2), 'perekup'); const p = s.current;
+  s.players[p].cars = [car(s, 'vedro-1', true), car(s, 'vedro-2', true)];
+  assert.match(bad(s, { type: 'sell', carIds: ['vedro-1', 'vedro-2'] }), /только одну/);
+  const c = s.players[p].cash;
+  s = ok(s, { type: 'sell', carIds: ['vedro-1'] });
+  assert.equal(s.players[p].cash - c, s.catalog['vedro-1'].sell);
+});
+
+test('family: +10% за проход клетки, максимум +30%; приходит целой', () => {
+  let s = mk(2); const p = s.current;
+  s.players[p].cars = [car(s, 'family-1', true)];
+  const f = BOARD.indexOf('family');
+  for (let k = 0; k < 4; k++) {
+    s.players[p].pos = f - 1; s.phase = 'move'; s.current = p;
+    s.players.forEach((q) => { if (q.id !== p) q.pos = 0; });
+    s = ok(s, { type: 'move', steps: 2 });
+  }
+  assert.equal(s.players[p].cars[0].fam, 3);
+  s.players[p].pos = BOARD.indexOf('dealer'); s.phase = 'act'; s.current = p;
+  assert.equal(legalActions(s).find((a) => a.type === 'sell').quotes['family-1'], Math.round(s.catalog['family-1'].sell * 1.3 / 10) * 10);
+});
+
+test('банк: +5% к наличным', () => {
+  let s = at(mk(2), 'bank'); const p = s.current; s.players[p].cash = 2000;
+  s = ok(s, { type: 'bank' });
+  assert.equal(s.players[p].cash, 2100);
+});
+
+test('техосмотр: 100 € за машину, карта применяется', () => {
+  let s = at(mk(2), 'tehosmotr'); const p = s.current;
+  s.players[p].cars = [car(s, 'vedro-1', true), car(s, 'family-1', true)];
+  const c = s.players[p].cash;
+  s = ok(s, { type: 'inspection' });
+  assert.equal(c - s.players[p].cash, 200);
+});
+
+test('лотерея и угон: партии без ошибок на любых картах', () => {
+  for (let seed = 1; seed <= 40; seed++) {
+    let s = at(mk(3, { seed }), 'lottery'); const p = s.current;
+    s.players.forEach((q) => { q.cars = [car(s, 'vedro-' + (q.id + 1), false, { kind: 'repair', deck: 'vedro', name: 'x', repair: { cost: 300 } })]; });
+    let r = applyAction(s, { type: 'lottery', player: p }); assert.ok(r.ok, r.error);
+    let t = r.state;
+    for (let g = 0; g < 5 && t.turn === s.turn && t.phase !== 'over'; g++) { const q = timeoutStep(t); assert.ok(q.ok, q.error); t = q.state; }
+    let u = at(mk(3, { seed }), 'ugon');
+    u.players.forEach((q) => { q.cars = [car(u, 'vedro-' + (q.id + 1), false, { kind: 'repair', deck: 'vedro', name: 'x', repair: { cost: 300 } })]; });
+    r = applyAction(u, { type: 'theft', player: u.current }); assert.ok(r.ok, r.error);
+    if (r.state.phase === 'theft_pick') { const q = timeoutStep(r.state); assert.ok(q.ok, q.error); }
+  }
+});
+
+test('прокат: 500 € за Economy/Crash, 1000 € за Family/Luxury, 1500 € за Classic, только отремонтированные', () => {
   let s = at(mk(2), 'prokat'); const p = s.current, c = s.players[p].cash;
   s.players[p].cars = [car(s, 'vedro-1', true), car(s, 'bitye-1', true), car(s, 'premium-1', true), car(s, 'retro-1', true), car(s, 'vedro-2', false)];
   s = ok(s, { type: 'rent' });
-  assert.equal(s.players[p].cash - c, 500 + 500 + 1000 + 1000);
+  assert.equal(s.players[p].cash - c, 500 + 500 + 1000 + 1500);
   let s2 = at(mk(2), 'prokat'); s2.players[s2.current].cars = [car(s2, 'vedro-2', false)];
   assert.match(bad(s2, { type: 'rent' }), /Нет отремонтированных/);
 });
@@ -184,7 +235,7 @@ test('такси: Ведро/Битьё 100×куб, Премиум/Ретро 2
 });
 
 test('гонка: открытая, никто не вступил — организатор забирает 1000 €', () => {
-  let s = at(mk(3), 'gonka_plus1'); const p = s.current, c = s.players[p].cash;
+  let s = at(mk(3), 'gonka_reroll'); const p = s.current, c = s.players[p].cash;
   s.players.forEach((q) => { if (q.id !== p) q.cars = []; });
   s = ok(s, { type: 'race_start' });
   s = ok(s, { type: 'race_open' });
@@ -192,7 +243,7 @@ test('гонка: открытая, никто не вступил — орга�
 });
 
 test('гонка: вызов — оба платят, взнос кратен 100 и не больше половины денег соперника', () => {
-  let s = at(mk(3), 'gonka_plus1'); const p = s.current, t = (p + 1) % 3, u = (p + 2) % 3;
+  let s = at(mk(3), 'gonka_reroll'); const p = s.current, t = (p + 1) % 3, u = (p + 2) % 3;
   s.players.forEach((q) => (q.cash = 2000));
   s = ok(s, { type: 'race_start' });
   assert.match(bad(s, { type: 'race_challenge', target: t, stake: 1100 }), /половины/);
@@ -202,38 +253,31 @@ test('гонка: вызов — оба платят, взнос кратен 10
   s = ok(s, { type: 'race_challenge', target: t, stake: 500 });
   assert.equal(s.phase, 'race_join'); assert.equal(actor(s), null);
   s = ok(s, { type: 'race_skip', player: u });   // третий отказался — окно закрылось досрочно
+  s = keep(s);
   assert.equal(s.players[t].cash, 2000 - 500 + 2000); // 2+1=3 < 5, победил вызванный
   assert.equal(s.players[p].cash, 2000 - 500);
 });
 
 test('гонка: 30 с окно — любой игрок может присоединиться, фонд растёт', () => {
-  let s = at(mk(3), 'gonka_plus1'); const p = s.current, t = (p + 1) % 3, u = (p + 2) % 3;
+  let s = at(mk(3), 'gonka_reroll'); const p = s.current, t = (p + 1) % 3, u = (p + 2) % 3;
   s.players.forEach((q) => (q.cash = 3000));
   s = ok(s, { type: 'race_start' });
   s = ok(s, { type: 'race_challenge', target: t, stake: 300 });
   s = ok(s, { type: 'race_join', player: u });  // все участвуют — гонка стартует сразу
+  s = keep(s);
   assert.equal(s.phase, 'move');
   assert.equal(s.players[p].cash + s.players[t].cash + s.players[u].cash, 9000 + 1000);
 });
 
 test('гонка: окно по таймеру (race_close) запускает заезд', () => {
-  let s = at(mk(3), 'gonka_plus1'); const p = s.current, t = (p + 1) % 3;
+  let s = at(mk(3), 'gonka_reroll'); const p = s.current, t = (p + 1) % 3;
   s.players.forEach((q) => (q.cash = 3000));
   s = ok(s, { type: 'race_start' });
   s = ok(s, { type: 'race_challenge', target: t, stake: 100 });
   assert.equal(s.phase, 'race_join');
   s = ok(s, { type: 'race_close' });
+  s = keep(s);
   assert.equal(s.phase, 'move');
-});
-
-test('гонка «+1»: организатор получает +1 автоматически', () => {
-  let s = at(mk(2), 'gonka_plus1'); const p = s.current, o = (p + 1) % 2;
-  s.players.forEach((q) => (q.cash = 2000));
-  s = ok(s, { type: 'race_start' });
-  s.forcedRolls = [3, 3, 1];
-  s = ok(s, { type: 'race_challenge', target: o, stake: 100 });
-  // 3+1=4 против 3 → победил организатор
-  assert.equal(s.players[p].cash, 2000 - 100 + 1200);
 });
 
 test('гонка с перебросом: при <6 можно перебросить, берётся максимум', () => {
@@ -291,7 +335,7 @@ test('защита: чужой ход и неверные действия от�
 });
 
 test('партии ботов (по 4 игрока) доходят до победителя без ошибок', () => {
-  const rate = { vedro: 1, bitye: 1, premium: 2, retro: 2 };
+  const rate = { vedro: 1, bitye: 1, family: 1, premium: 2, retro: 2 };
   for (let seed = 1; seed <= 6; seed++) {
     let s = createGame({ names: ['A', 'B', 'C', 'D'], seed, cards, goal: 30000 });
     let steps = 0;
@@ -301,7 +345,7 @@ test('партии ботов (по 4 игрока) доходят до побе
       let done = false;
       if (s.phase === 'move') done = try_({ player: who, type: 'move', steps: 1 + (steps % 2) });
       else if (s.phase === 'act') {
-        for (const t of ['sell', 'rent', 'autoservice', 'buy_start']) {
+        for (const t of ['sell', 'rent', 'autoservice', 'buy_start', 'bank', 'lottery', 'inspection', 'theft']) {
           const a = pick(t); if (a && try_({ ...a, player: who })) { done = true; break; }
         }
         if (!done) {
@@ -320,8 +364,9 @@ test('партии ботов (по 4 игрока) доходят до побе
         for (const id of ids) { if (done) break; done = try_({ type: 'repair', carIds: [id], player: who }); }
         done = done || try_({ type: 'repair', carIds: [], player: who });
       } else {
-        const t = { race_setup: 'race_open', race_join: 'race_close', race_reroll: 'race_keep' }[s.phase];
-        done = try_({ type: t, player: who });
+        const t = { race_setup: 'race_open', race_join: 'race_close', race_reroll: 'race_keep', lot_sell: 'lot_skip', lot_insure: 'lot_skip', lot_swap: 'lot_skip', evac: 'lot_skip', swap_offer: 'swap_decline' }[s.phase];
+        if (s.phase === 'theft_pick') done = try_({ ...pick('theft_pick'), player: who });
+        else done = try_({ type: t, player: who });
       }
       assert.ok(done, `бот застрял в фазе ${s.phase}`);
     }
@@ -336,7 +381,7 @@ test('publicView прячет порядок колод', () => {
 });
 
 test('проданная машина и снятый дефект возвращаются в низ колод', () => {
-  let s = at(mk(2), 'skupka'); const p = s.current;
+  let s = at(mk(2), 'dealer'); const p = s.current;
   s.players[p].cars = [car(s, 'vedro-1', true)];
   const n = s.decks.vedro.length;
   s = ok(s, { type: 'sell', carIds: ['vedro-1'] });
@@ -368,17 +413,17 @@ test('«Есть покупатель» / неремонтируемые маш�
   let s = mk(2); const p = s.current;
   s.players[p].cars = [car(s, 'vedro-1', false, { kind: 'buyer', name: 'Есть покупатель' }), car(s, 'premium-3', false, { kind: 'unrepairable', name: 'Распил' }), car(s, 'vedro-2', false, { kind: 'repair', name: 'x', repair: { cost: 300 } })];
   const c = s.players[p].cash;
-  assert.match(bad(s, { type: 'sell_now', carIds: ['vedro-2'] }), /Скупке/);
+  assert.match(bad(s, { type: 'sell_now', carIds: ['vedro-2'] }), /Перекупа или Дилера/);
   s = ok(s, { type: 'sell_now', carIds: ['vedro-1', 'premium-3'] });
   assert.equal(s.phase, 'move'); assert.equal(s.current, p);
   assert.equal(s.players[p].cash - c, s.catalog['vedro-1'].sell + s.catalog['premium-3'].auction_start);
 });
 
 test('скупка отдаёт цены по каждой машине; порядок кубов гонки известен', () => {
-  let s = at(mk(2), 'skupka'); const p = s.current;
+  let s = at(mk(2), 'dealer'); const p = s.current;
   s.players[p].cars = [car(s, 'vedro-1', true)];
   assert.equal(legalActions(s).find((a) => a.type === 'sell').quotes['vedro-1'], s.catalog['vedro-1'].sell);
-  let r = at(mk(3), 'gonka_plus1'); const o = r.current, t = (o + 1) % 3, w = (o + 2) % 3;
+  let r = at(mk(3), 'gonka_reroll'); const o = r.current, t = (o + 1) % 3, w = (o + 2) % 3;
   r.players.forEach((x) => (x.cash = 3000)); r = ok(r, { type: 'race_start' });
   r = ok(r, { type: 'race_challenge', target: t, stake: 100 });
   r = applyAction(r, { type: 'race_join', player: w }).state; // последний допустимый вступил — начинаются броски
@@ -395,7 +440,7 @@ test('таймер: автоматическое такси на самой до
 });
 
 test('гонка: каждый бросает сам по очереди; не бросил — бросок делается автоматически', () => {
-  let s = at(mk(2), 'gonka_plus1'); const o = s.current, t = (o + 1) % 2;
+  let s = at(mk(2), 'gonka_reroll'); const o = s.current, t = (o + 1) % 2;
   s.players.forEach((x) => (x.cash = 2000)); s = ok(s, { type: 'race_start' });
   s.forcedRolls = [2, 4];
   let r = applyAction(s, { type: 'race_challenge', player: o, target: t, stake: 100 }); assert.ok(r.ok, r.error); s = r.state;
