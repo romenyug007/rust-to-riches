@@ -78,7 +78,7 @@ export function createGame({ names, goal = 30000, seed = 1, cards, forcedRolls }
   if (names.length < 2 || names.length > 6) fail('Игроков должно быть от 2 до 6');
   if (!GOALS.includes(goal)) fail('Цель: 30000, 50000, 100000 или 200000');
   const s = {
-    rng: seed >>> 0, goal, turn: 1, current: 0, phase: 'move', winner: null,
+    rng: seed >>> 0, goal, turn: 1, current: 0, phase: 'move', winner: null, places: [],
     round: 1, loans: [], nextLoanId: 1, loanReq: null, loanReturn: null,
     players: names.map((name, id) => ({ id, name, cash: START_CASH, pos: 0, cars: [], eliminated: false, insured: false, repairBonusUntil: 0, saleBonusUntil: 0, expo: false })),
     catalog: {}, decks: { vedro: [], bitye: [], family: [], premium: [], retro: [] },
@@ -196,7 +196,7 @@ const loanDue = (s, l) => l.principal + loanInterest(s, l);
 
 function eliminate(s, p, lenderId) {
   const lender = s.players[lenderId];
-  if (lender && !lender.eliminated) lender.cash += p.cash;
+  if (lender && (!lender.eliminated || lender.finished)) lender.cash += p.cash;
   p.cars.forEach((c) => toBottom(s, c)); p.cash = 0; p.cars = []; p.eliminated = true; p.pos = -1;
   s.loans = s.loans.filter((l) => l.borrower !== p.id && l.lender !== p.id);
   ev(s, { type: 'eliminated', player: p.id, reason: 'loan_default', lender: lenderId });
@@ -238,13 +238,28 @@ function nextTurn(s) {
     if (settleLoans(s, p)) continue;
     break;
   }
-  const a = alive(s);
-  if (a.length === 1 && s.winner == null) { s.winner = a[0].id; s.phase = 'over'; ev(s, { type: 'win', player: a[0].id, reason: 'last_player' }); }
+  checkWinner(s);
+}
+// Призовые места: 1-е — кто первым набрал цель (без долгов); дальше доигрывают за 2-е и 3-е.
+// Мест: 2 игрока — 2, три и больше — 3. Если за последнее место остался один игрок — оно ему автоматически.
+const MEDALS = (s) => Math.min(3, s.players.length);
+function award(s, p) {
+  s.places.push(p.id); p.finished = s.places.length; p.eliminated = true; p.pos = -1;
+  ev(s, { type: 'place', player: p.id, place: p.finished });
+  if (p.finished === 1) { s.winner = p.id; ev(s, { type: 'win', player: p.id }); }
 }
 function checkWinner(s) {
-  if (s.winner != null) return;
-  const w = s.players.find((p) => !p.eliminated && p.cash >= s.goal && !hasDebt(s, p));
-  if (w) { s.winner = w.id; s.phase = 'over'; ev(s, { type: 'win', player: w.id }); }
+  if (s.phase === 'over') return;
+  if (!s.places) s.places = [];
+  for (const p of s.players) if (!p.eliminated && p.cash >= s.goal && !hasDebt(s, p) && s.places.length < MEDALS(s)) award(s, p);
+  let rest = s.players.filter((p) => !p.eliminated);
+  if (rest.length === 1 && s.places.length < MEDALS(s)) { award(s, rest[0]); rest = []; }
+  if (s.places.length >= MEDALS(s) || !rest.length) {
+    s.phase = 'over'; if (s.winner == null && s.places.length) s.winner = s.places[0];
+    ev(s, { type: 'game_over', places: [...s.places] });
+    return;
+  }
+  if (cur(s).eliminated) nextTurn(s); // игрок занял место в свой ход — ход переходит дальше
 }
 function destination(s, p, steps) {
   const cap = (s.playerCount || s.players.length) <= 4 ? 1 : 2;

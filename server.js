@@ -76,6 +76,14 @@ const json = (res, code, o) => { res.writeHead(code, { 'content-type': 'applicat
 const seatOf = (room, token) => room.seats.findIndex((x) => x.token === token);
 const PAWNS = ['red', 'blue', 'green', 'yellow', 'black', 'white']; // цвета человечков
 const freePawn = (room) => PAWNS.find((c) => !room.seats.some((x) => x.color === c));
+// никнеймы: один ник — одно устройство (хранится в памяти сервера, пропадает при перезапуске)
+const nicks = new Map();
+const devOk = (d) => typeof d === 'string' && /^[a-f0-9]{16,40}$/.test(d);
+function suggestNick(nick, taken) {
+  for (let n = 2; n < 100; n++) { const c = (nick.slice(0, 13) + n); if (!taken(c)) return c; }
+  return nick.slice(0, 11) + Math.floor(Math.random() * 1e5);
+}
+const nickTaken = (device) => (c) => { const d = nicks.get(c.toLowerCase()); return d && d !== device; };
 const FORBIDDEN = new Set(['auction_close']); // закрывает аукцион только сервер по таймеру
 
 const server = http.createServer(async (req, res) => {
@@ -97,6 +105,14 @@ const server = http.createServer(async (req, res) => {
     }
     if (req.method !== 'POST') return json(res, 404, { error: 'not found' });
     const b = await body(req);
+    if (url.pathname === '/api/nick') { // проверить и закрепить ник за устройством
+      const nick = clean(b.nick); if (!nick) return json(res, 400, { error: 'Введите никнейм' });
+      if (!devOk(b.device)) return json(res, 400, { error: 'Неверное устройство' });
+      if (nickTaken(b.device)(nick)) return json(res, 409, { error: 'Ник «' + nick + '» уже занят', suggest: suggestNick(nick, nickTaken(b.device)) });
+      if (b.old) { const o = clean(b.old).toLowerCase(); if (nicks.get(o) === b.device) nicks.delete(o); }
+      nicks.set(nick.toLowerCase(), b.device);
+      return json(res, 200, { ok: true, nick });
+    }
     if (url.pathname === '/api/create') {
       if (rooms.size >= MAX_ROOMS) return json(res, 503, { error: 'Сервер занят, попробуйте позже' });
       const name = clean(b.name); if (!name) return json(res, 400, { error: 'Введите имя' });
@@ -110,7 +126,8 @@ const server = http.createServer(async (req, res) => {
       const name = clean(b.name); if (!name) return json(res, 400, { error: 'Введите имя' });
       if (room.state) return json(res, 400, { error: 'Игра уже началась' });
       if (room.seats.length >= 6) return json(res, 400, { error: 'В комнате уже 6 игроков' });
-      if (room.seats.some((x) => x.name.toLowerCase() === name.toLowerCase())) return json(res, 400, { error: 'Такое имя уже занято' });
+      const inRoom = (c) => room.seats.some((x) => x.name.toLowerCase() === c.toLowerCase());
+      if (inRoom(name)) return json(res, 409, { error: 'В этой комнате уже есть игрок «' + name + '»', suggest: suggestNick(name, inRoom) });
       const token = randomBytes(12).toString('hex');
       const color = PAWNS.includes(b.color) && !room.seats.some((x) => x.color === b.color) ? b.color : freePawn(room);
       room.seats.push({ name, token, color });

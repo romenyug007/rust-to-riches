@@ -340,7 +340,7 @@ test('партии ботов (по 4 игрока) доходят до побе
     let s = createGame({ names: ['A', 'B', 'C', 'D'], seed, cards, goal: 30000 });
     let steps = 0;
     const try_ = (a) => { const r = applyAction(s, a); if (r.ok) s = r.state; return r.ok; };
-    while (s.phase !== 'over' && steps++ < 8000) {
+    while (s.phase !== 'over' && steps++ < 60000) {
       const who = actor(s), acts = legalActions(s), pick = (t) => acts.find((a) => a.type === t);
       let done = false;
       if (s.phase === 'move') done = try_({ player: who, type: 'move', steps: 1 + (steps % 2) });
@@ -370,8 +370,8 @@ test('партии ботов (по 4 игрока) доходят до побе
       }
       assert.ok(done, `бот застрял в фазе ${s.phase}`);
     }
-    assert.equal(s.phase, 'over', `партия seed=${seed} не закончилась за 8000 действий`);
-    assert.ok(s.players[s.winner].cash >= 30000);
+    assert.equal(s.phase, 'over', `партия seed=${seed} не закончилась`);
+    assert.ok(s.players[s.winner].cash >= 30000); assert.equal(s.places.length, 3); assert.equal(s.places[0], s.winner);
   }
 });
 
@@ -508,4 +508,17 @@ test('обмен из колоды Luxury: машина Luxury уходит, и�
     }
   }
   assert.fail('обмен ни разу не выпал');
+});
+
+test('места: 3 игрока — первый финиширует, двое доигрывают, последний оставшийся получает 3-е автоматически', () => {
+  let s = at(mk(3), 'bank'); const a = s.current, b = (a + 1) % 3, c = (a + 2) % 3;
+  s.players[a].cash = 29000;
+  s = ok(s, { type: 'bank' });                      // 29000 + 5% = 30450 ≥ цели
+  assert.deepEqual(s.places, [a]); assert.equal(s.winner, a); assert.notEqual(s.phase, 'over');
+  assert.ok(s.current !== a);
+  s.players[s.current].pos = BOARD.indexOf('bank'); s.phase = 'act'; s.players[s.current].cash = 29000;
+  const second = s.current, third = second === b ? c : b;
+  s = ok(s, { type: 'bank' });
+  assert.deepEqual(s.places, [a, second, third]); assert.equal(s.phase, 'over');
+  assert.equal(s.players[third].finished, 3);
 });

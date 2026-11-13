@@ -43,7 +43,8 @@ test('комната: создание, вход по коду, имена оч�
   const j = await post('/api/join', { room: c.room.toLowerCase(), name: 'Борис' });
   assert.equal(j.seat, 1);
   assert.ok(!/[<>&"']/.test(rooms.get(c.room).seats[0].name)); // имя очищено от разметки
-  assert.equal((await post('/api/join', { room: c.room, name: 'борис' })).status, 400); // имя занято
+  const dup = await post('/api/join', { room: c.room, name: 'борис' }); assert.equal(dup.status, 409); // имя занято — сервер предлагает свободное
+  assert.equal(dup.suggest, 'борис2');
   assert.equal((await post('/api/start', { room: c.room, token: j.token })).status, 403);
   const solo = await post('/api/create', { name: 'Один' });
   assert.equal((await post('/api/start', { room: solo.room, token: solo.token })).status, 400);
@@ -101,3 +102,11 @@ test('переподключение: тот же токен получает а
 });
 
 after(() => { server.closeAllConnections?.(); server.close(); });
+
+test('ник: закрепляется за устройством, занятый — сервер предлагает свободный', async () => {
+  const d1 = 'a'.repeat(24), d2 = 'b'.repeat(24);
+  assert.equal((await post('/api/nick', { nick: 'Гонщик', device: d1 })).status, 200);
+  assert.equal((await post('/api/nick', { nick: 'гонщик', device: d1 })).status, 200); // своё устройство — можно
+  const r = await post('/api/nick', { nick: 'Гонщик', device: d2 });
+  assert.equal(r.status, 409); assert.equal(r.suggest, 'Гонщик2');
+});
