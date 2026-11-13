@@ -56,7 +56,7 @@ function mask(s) { // клиент не видит порядок колод: т
   return v;
 }
 function payload(room, seat, events, full) {
-  const base = { room: room.code, me: seat, host: 0, players: room.seats.map((x) => x.name) };
+  const base = { room: room.code, me: seat, host: 0, players: room.seats.map((x) => x.name), colors: room.seats.map((x) => x.color) };
   if (!room.state) return { ...base, phase: 'lobby' };
   return { ...base, phase: 'game', state: mask(room.state), events, deadline: room.deadline, now: Date.now(), key: room.key, catalog: full ? room.state.catalog : undefined };
 }
@@ -74,6 +74,8 @@ function body(req) {
 }
 const json = (res, code, o) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(o)); };
 const seatOf = (room, token) => room.seats.findIndex((x) => x.token === token);
+const PAWNS = ['red', 'blue', 'green', 'yellow', 'black', 'white']; // цвета человечков
+const freePawn = (room) => PAWNS.find((c) => !room.seats.some((x) => x.color === c));
 const FORBIDDEN = new Set(['auction_close']); // закрывает аукцион только сервер по таймеру
 
 const server = http.createServer(async (req, res) => {
@@ -98,7 +100,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === '/api/create') {
       if (rooms.size >= MAX_ROOMS) return json(res, 503, { error: 'Сервер занят, попробуйте позже' });
       const name = clean(b.name); if (!name) return json(res, 400, { error: 'Введите имя' });
-      const room = { code: code(), seats: [{ name, token: randomBytes(12).toString('hex') }], state: null, clients: new Map(), key: '', deadline: 0, touched: Date.now() };
+      const room = { code: code(), seats: [{ name, token: randomBytes(12).toString('hex'), color: PAWNS.includes(b.color) ? b.color : 'red' }], state: null, clients: new Map(), key: '', deadline: 0, touched: Date.now() };
       rooms.set(room.code, room);
       return json(res, 200, { room: room.code, token: room.seats[0].token, seat: 0 });
     }
@@ -110,12 +112,20 @@ const server = http.createServer(async (req, res) => {
       if (room.seats.length >= 6) return json(res, 400, { error: 'В комнате уже 6 игроков' });
       if (room.seats.some((x) => x.name.toLowerCase() === name.toLowerCase())) return json(res, 400, { error: 'Такое имя уже занято' });
       const token = randomBytes(12).toString('hex');
-      room.seats.push({ name, token });
+      const color = PAWNS.includes(b.color) && !room.seats.some((x) => x.color === b.color) ? b.color : freePawn(room);
+      room.seats.push({ name, token, color });
       broadcast(room);
       return json(res, 200, { room: room.code, token, seat: room.seats.length - 1 });
     }
     const seat = seatOf(room, b.token);
     if (seat < 0) return json(res, 403, { error: 'Нет доступа' });
+    if (url.pathname === '/api/color') { // выбор человечка в лобби
+      if (room.state) return json(res, 400, { error: 'Игра уже началась' });
+      if (!PAWNS.includes(b.color)) return json(res, 400, { error: 'Неверный цвет' });
+      if (room.seats.some((x, i) => i !== seat && x.color === b.color)) return json(res, 400, { error: 'Этот цвет уже занят' });
+      room.seats[seat].color = b.color; broadcast(room);
+      return json(res, 200, { ok: true });
+    }
     if (url.pathname === '/api/start') {
       if (seat !== 0) return json(res, 403, { error: 'Начать может только создатель комнаты' });
       if (room.state) return json(res, 400, { error: 'Игра уже идёт' });

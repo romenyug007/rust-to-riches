@@ -38,7 +38,7 @@ input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius
 .cell.here{outline:4px solid var(--acc);outline-offset:-2px}
 .cell.reach{border-color:#2E7D46;border-width:3px}
 .cell .reach-b{position:absolute;right:6px;top:34px;background:#2E7D46;color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:8px}
-.cell .toks{position:absolute;left:6px;bottom:5px;display:flex}
+.cell .toks{position:absolute;left:6px;bottom:4px;display:flex;gap:2px}
 .center{grid-row:2/4;grid-column:2/6;position:relative;background:#D9D1C1;border:2px solid #C6BBA6;border-radius:16px;display:flex;gap:12px;padding:10px;min-height:0}
 .act{width:430px;flex:none;background:var(--card);border-radius:12px;padding:10px 12px;overflow:auto;font-size:14px}
 .act p{margin:6px 0}.act label{font-size:13px}
@@ -77,6 +77,15 @@ input,select{font:inherit;padding:6px;border:1px solid var(--line);border-radius
 .pl .pop{display:none;position:absolute;left:0;bottom:70px;width:360px;max-height:360px;overflow:auto;background:#2C2D33;color:#fff;border-radius:12px;padding:12px 14px;z-index:30;box-shadow:0 14px 36px rgba(0,0,0,.5);font-size:13px}
 .pl:hover .pop,.pl:focus .pop,.pl:focus-within .pop{display:block}
 .pl .pop .r{display:flex;gap:8px;align-items:center;margin:4px 0}
+.mback{position:absolute;inset:0;background:rgba(0,0,0,.35);z-index:39}
+.modal{position:absolute;left:160px;top:90px;width:1280px;height:720px;box-sizing:border-box;z-index:40;background:#FBF8F1;border:4px solid var(--acc);border-radius:22px;box-shadow:0 20px 60px rgba(0,0,0,.45);padding:22px 30px;overflow:auto;font-size:26px}
+.modal .mh{display:flex;justify-content:space-between;align-items:center;font:400 30px 'Russo One',sans-serif;margin-bottom:10px}
+.modal button{font-size:26px;padding:16px 26px;border-radius:12px;margin:6px 10px 6px 0}
+.modal input,.modal select{font-size:25px;padding:10px}
+.modal label{font-size:25px;display:block;padding:7px 0}
+.modal input[type=checkbox],.modal input[type=radio]{width:28px;height:28px;vertical-align:middle;margin-right:8px}
+.modal .big{margin:6px auto 14px}
+.reopen{position:absolute;left:50%;bottom:84px;transform:translateX(-50%);z-index:38;font-size:24px;padding:16px 30px;border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.35)}
 .rot{display:none;position:fixed;inset:auto 0 0 0;padding:8px;text-align:center;background:#2C2D33;color:#fff;z-index:60;font-size:14px}
 @media (orientation:portrait){.ingame .rot{display:block}}
 </style></head><body><main>
@@ -959,7 +968,13 @@ function publicView(s) {
 
 
 const $=(s)=>document.querySelector(s);
-const COL=['#d33','#27a','#2a5','#d80','#92c','#088'];
+const PAWN={red:['#D32F2F','#fff','Красный'],blue:['#1F5FAE','#fff','Синий'],green:['#2E7D46','#fff','Зелёный'],yellow:['#F2C14E','#141516','Жёлтый'],black:['#141516','#fff','Чёрный'],white:['#FFFFFF','#141516','Белый']};
+const PORDER=['red','blue','green','yellow','black','white'];
+const pcol=(i)=>(LOBBY&&LOBBY.colors&&LOBBY.colors[i])||PORDER[i%6];
+// человечек с широким контуром (~20% от фигуры): чёрный — с белым, белый — с чёрным
+function picker(){return '<p><b>Выберите человечка:</b><br>'+PORDER.map(c=>{const taken=LOBBY.colors&&LOBBY.colors.some((x,j)=>j!==ME&&x===c);const mine=pcol(ME)===c;return `<button class="sec" data-pc="${c}" ${taken?'disabled':''} style="padding:6px 8px;${mine?'outline:3px solid var(--acc)':''}" title="${PAWN[c][2]}">${pawnC(c,40)}</button>`}).join('')+'</p>'}
+function pawn(i,h){return pawnC(pcol(i),h)}
+function pawnC(col,h){const c=PAWN[col]||PAWN.red,w=Math.round(h*0.62);return `<svg width="${w}" height="${h}" viewBox="0 0 30 48" aria-label="${c[2]} человечек" style="filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))"><g fill="${c[0]}" stroke="${c[1]}" stroke-width="4.5" stroke-linejoin="round"><circle cx="15" cy="10" r="7.5"/><path d="M4 45 L6.5 26 Q8 19.5 15 19.5 Q22 19.5 23.5 26 L26 45 Z"/></g></svg>`}
 const CN={dealer:'Дилер',vedro:'Economy',avtoservis:'Автосервис',gonka_reroll:'Гонка',avtopodbor:'Авторынок',lottery:'Лотерея',bitye:'Crash',tehosmotr:'Техосмотр',perekup:'Перекуп',family:'Family',premium:'Luxury',ugon:'Угон',prokat:'Прокат',retro:'Classic',bank:'Банк'};
 const CD={dealer:'продать все машины',vedro:'покупка',avtoservis:'ремонт',gonka_reroll:'переброс у организатора',avtopodbor:'любая колода',lottery:'карта удачи',bitye:'ремонт по кубику',tehosmotr:'100 € за машину',perekup:'продать 1 машину',family:'+10% за проход',premium:'покупка',ugon:'кубик 5–6',prokat:'только целые',retro:'только аукцион',bank:'+5% к наличным'};
 const DN={vedro:'Economy',bitye:'Crash',family:'Family',premium:'Luxury',retro:'Classic'};
@@ -1043,10 +1058,11 @@ function lobby(msg){document.body.classList.remove('ingame');const app=$('#app')
   $('#jn').onclick=()=>go('/api/join',{name:$('#nm').value,room:$('#rc').value.trim().toUpperCase()});return}
  if(!LOBBY){app.innerHTML='<div class="card">Подключаемся…</div>';return}
  const link=location.origin+'/?room='+ROOM;
- app.innerHTML='<div class="card"><p>Комната <b style="font-size:22px">'+ROOM+'</b></p><p>Ссылка для друзей:<br><input readonly value="'+link+'" style="width:100%" onclick="this.select()"></p><p><b>Игроки ('+LOBBY.players.length+'/6):</b></p>'+LOBBY.players.map((n,i)=>'<div><span class="tok" style="background:'+COL[i]+'">'+n[0]+'</span>'+n+(i===0?' (создатель)':'')+(i===ME?' — это вы':'')+'</div>').join('')+
+ app.innerHTML='<div class="card"><p>Комната <b style="font-size:22px">'+ROOM+'</b></p><p>Ссылка для друзей:<br><input readonly value="'+link+'" style="width:100%" onclick="this.select()"></p>'+picker()+'<p><b>Игроки ('+LOBBY.players.length+'/6):</b></p>'+LOBBY.players.map((n,i)=>'<div style="display:flex;align-items:center;gap:8px;margin:4px 0">'+pawn(i,34)+n+(i===0?' (создатель)':'')+(i===ME?' — это вы':'')+'</div>').join('')+
   (ME===0?'<p>Цель партии: <select id="goal"><option value="30000">30 000 €</option><option value="50000">50 000 €</option><option value="100000">100 000 €</option></select></p><button id="st"'+(LOBBY.players.length<2?' disabled':'')+'>Начать игру</button>':'<p class="mut">Ждём, пока создатель начнёт игру…</p>')+' <button class="sec" id="lv">Выйти</button></div>';
  const st=$('#st');if(st)st.onclick=async()=>{const r=await api('/api/start',{room:ROOM,token:TOKEN,goal:+$('#goal').value});if(r.error)alert(r.error)};
- $('#lv').onclick=leave}
+ $('#lv').onclick=leave;
+ document.querySelectorAll('[data-pc]').forEach(e=>e.onclick=async()=>{const r=await api('/api/color',{room:ROOM,token:TOKEN,color:e.dataset.pc});if(r.error)alert(r.error)})}
 async function act(a){const r=await api('/api/action',{room:ROOM,token:TOKEN,action:a});if(r.error){toast=r.error;render()}}
 const actAs=(p,a)=>act(a);
 
@@ -1074,10 +1090,10 @@ if(s.phase==='act'){
   if(a.type==='lottery')h.push(`<button data-a='${j({type:'lottery'})}'>Тянуть карту Лотереи</button>`);
   if(a.type==='bank')h.push(`<button data-a='${j({type:'bank'})}'>Получить в Банке +${eur(a.gain)}</button>`);
   if(a.type==='theft')h.push(`<button data-a='${j({type:'theft'})}'>Угон: бросить кубик</button>`);
-  if(a.type==='rent')h.push(`<button data-a='${j({type:'rent'})}'>Сдать в прокат</button>`);
+  if(a.type==='rent'){const rc=p.cars.filter(c=>c.repaired);h.push(`<button data-a='${j({type:'rent'})}'>Сдать в прокат: +${eur(rc.reduce((t,c)=>t+RENT[s.catalog[c.id].deck],0))}</button><div class="mut" style="font-size:.8em">${rc.map(c=>cn(c.id)+' ('+DN[s.catalog[c.id].deck]+') '+eur(RENT[s.catalog[c.id].deck])).join(' · ')}</div>`)}
   if(a.type==='race_start')h.push(`<button data-a='${j({type:'race_start'})}'>Начать гонку</button>`);
   if(a.type==='swap_pay')Object.keys(s.decks).filter(d=>s.decks[d].length).forEach(d=>h.push(`<button class="sec" data-a='${j({type:'swap_pay',carId:a.carId,deck:d})}'>Обмен «${cn(a.carId)}» → ${DN[d]}</button>`));
-  if(a.type==='taxi')h.push(`<button class="sec" data-a='${j({type:'taxi',carId:a.carId})}'>Такси: ${cn(a.carId)}</button>`);
+  if(a.type==='taxi'){const dk=s.catalog[a.carId].deck;h.push(`<button class="sec" data-a='${j({type:'taxi',carId:a.carId})}'>Такси: ${cn(a.carId)} · ${DN[dk]} · ${TAXI[dk]} € × кубик</button>`)}
   if(a.type==='pass')h.push(`<button class="sec" data-a='{"type":"pass"}'>Пропустить</button>`)})}
 if(s.phase==='buy'){const c=s.catalog[s.pending.cardId];
  h.push(`<p><b>${c.name}</b> · ${DN[c.deck]} · продажа ${eur(c.sell)}${c.buy!=null?' · покупка '+eur(c.buy):''} · старт аукциона ${eur(c.auction_start)}</p>`);
@@ -1164,7 +1180,7 @@ function defInfo(c){const k=G.catalog[c.id];
  if(c.defect){if(c.defect.kind==='unrepairable')return [c.defect.name,'не ремонтируется · аукцион '+eur(k.auction_start)];if(c.defect.kind==='buyer')return [c.defect.name,'продаётся как целая'];if(c.defect.kind==='swap_pay')return [c.defect.name,''];return [(c.hidden?'Скрытый: ':'')+c.defect.name,'ремонт '+eur(c.defect.repair.cost)]}
  if(k.deck==='bitye')return ['Восстановление','кубик: '+[k.repair.die_1_2,k.repair.die_3_4,k.repair.die_5_6].map(eur).join(' / ')];
  if(k.deck==='retro')return ['Реставрация','ремонт '+eur(k.repair.cost)];return ['Ремонт','']}
-let infoK=null,gainAt=0;
+let infoK=null,gainAt=0,modalOff='';
 function scale(){const st=$('#stage');if(!st)return;const k=Math.min(innerWidth/1600,innerHeight/900);st.style.transform=`translate(-50%,-50%) scale(${k})`}
 addEventListener('resize',scale);
 function showInfo(i){const el=$('#info');if(!el)return;if(i==null){el.style.display='none';return}const k=BOARD[i],c=DC[k]||SPECIAL[k]||['#26272C','#fff'];
@@ -1175,7 +1191,7 @@ function cellHTML(i,s,reach){const k=BOARD[i],g=GRID[i],me=s.players[ME];let ban
  else{const c=SPECIAL[k]||['#3A3B40','#fff'];band=c[0];bandFg=c[1];body=icon(k,k==='lottery'?'#7A4FB5':k==='bank'?'#7A5C14':'#3A3B40',46)}
  if(k==='family')body=W2(130,52,'0 0 160 64',famInner(5));if(k==='lottery')cls+=' deck';
  if(s.players[s.current].pos===i)cls+=' here';const r=reach[i];if(r)cls+=' reach';
- const toks=s.players.filter(q=>q.pos===i&&!q.eliminated).map(q=>`<span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span>`).join('');
+ const toks=s.players.filter(q=>q.pos===i&&!q.eliminated).map(q=>pawn(q.id,66)).join('');
  return `<button type="button" class="${cls}" data-cell="${i}" style="grid-row:${g[0]};grid-column:${g[1]};--dc:${DC[k]?DC[k][2]:'#7A4FB5'}"><span class="band" style="background:${band};color:${bandFg}">${CN[k].toUpperCase()}</span><span class="body">${body}<span class="short">${CD[k]}</span></span>${r?`<span class="reach-b">${r.steps} ${r.steps==1?'шаг':'шага'}${r.cost?' · '+eur(r.cost):''}</span>`:''}<span class="toks">${toks}</span></button>`}
 function pairHTML(c){const k=G.catalog[c.id],d=DC[k.deck],di=defInfo(c);
  return `<div class="pair" title="${k.name}"><div class="cc" style="--dc:${d[2]};--df:${d[1]}"><div class="b" style="background:${d[0]}">${DN[k.deck].toUpperCase()}</div><div class="im">${carSVG(c.id,96)}</div><div class="pr">${k.name} · ${eur(shownPrice(c))}${c.fam?' <span style="color:#2E7D46">+'+c.fam*10+'%</span>':''}</div>${di?'<div class="tint"></div>':''}</div>`+
@@ -1201,21 +1217,28 @@ let cells='';for(let i=0;i<BOARD.length;i++)cells+=cellHTML(i,s,reach);
 const broken=me.cars.filter(c=>!c.repaired),okc=me.cars.filter(c=>c.repaired);
 let gar=broken.map(pairHTML).join('');for(let i=broken.length%3?3-broken.length%3:0;i>0;i--)gar+='<div></div>';gar+=okc.map(pairHTML).join('');
 const minAll=me.cars.reduce((t,c)=>t+(sellPrice(s,c,me)||0),0);
-let top;
+let top,modalHTML='';
 if(s.phase==='over')top=`<h2>🏆 Победил ${nm(s.winner)}!</h2><button id="again">В меню</button>`;
 else{const li=loanInfo(s,ME);let loan='';
  if(s.phase==='loan'){const R=s.loanReq;loan='<p><b>'+nm(R.borrower)+'</b> просит в долг '+eur(R.amount)+'. 15 с на ответ.</p>'+(ME===R.borrower?'<button class="sec" data-a=\'{"type":"loan_cancel"}\'>Отмена</button>':(li.canAccept?'<button data-a=\'{"type":"loan_accept"}\'>Дать в долг '+eur(R.amount)+'</button>':'<span class="mut">У вас недостаточно денег</span>'))}
  else{if(li.canRequest)loan+=`<p class="mut">Не хватает денег? <input id="la" type="number" value="500" step="100" style="width:90px"><button class="sec" data-loan="1">Попросить в долг</button></p>`;
   li.repayable.forEach(r=>{if(r.roundsLeft===0)loan+='<div class="bad"><b>⚠ Срочно верните долг '+nm(r.lender)+': '+eur(r.due)+'.</b></div>';loan+=`<button class="sec" data-rep-loan="${r.loanId}">Вернуть ${nm(r.lender)}: ${eur(r.due)}</button>`})}
  const mine=(['auction','race_join'].includes(s.phase)||actor(s)===ME);
- top=`<div class="turn">Ходит: <span class="tok" style="background:${COL[cur.id]}">${cur.name[0]}</span>${cur.name}${s.phase==='move'&&actor(s)===ME?' — <span style="color:#2E7D46">нажмите на зелёную клетку или кнопку</span>':''}</div>${toast?`<div class="bad">${toast}</div>`:''}<div>${s.phase==='loan'?'':(mine?controls():'<p class="mut">Ждём ход игрока '+cur.name+'…</p>')}${loan}</div>`}
+ const ctl=(s.phase==='loan'?'':(mine?controls():''))+loan;
+ const turnLine=`<div class="turn">Ходит: ${pawn(cur.id,26)} ${cur.name}${s.phase==='move'&&actor(s)===ME?' — <span style="color:#2E7D46">нажмите на зелёную клетку или кнопку</span>':''}</div>${toast?`<div class="bad">${toast}</div>`:''}`;
+ if(s.phase!=='move'&&ctl.includes('<button')){ // после выбора клетки — действия крупно, на 80% экрана
+  const card=(s.phase==='buy'&&s.pending)?bigCard(s.pending.cardId,'ОТКРЫТАЯ КАРТА'):(s.phase==='auction'&&s.auction)?bigCard(s.auction.cardId,'АУКЦИОН · СТАВКА '+eur(s.auction.bid)+' · '+nm(s.auction.bidder).toUpperCase()):'';
+  if(modalOff!==curKey)modalHTML=`<div class="mback"></div><div class="modal"><div class="mh"><span>${CN[BOARD[s.players[s.current].pos]]||''} · ${actor(s)===ME?'ваш ход':cur.name}</span><button class="sec" id="mclose">Посмотреть поле</button></div>${toast?`<div class="bad">${toast}</div>`:''}${card}${ctl}</div>`;
+  else modalHTML=`<button class="reopen" id="mopen">Открыть действия</button>`;
+  top=turnLine+'<p class="mut">Действия открыты в большом окне.</p>';
+ }else top=turnLine+`<div>${ctl||'<p class="mut">Ждём ход игрока '+cur.name+'…</p>'}</div>`}
 const players=s.players.map(q=>{const debt=s.loans.filter(l=>l.borrower===q.id).map(l=>`<div class="r" style="color:#FF8A80">Долг ${nm(l.lender)}: ${eur(loanDue(s,l))}</div>`).join('');
- return `<div class="pl ${q.id===s.current?'cur':''} ${q.eliminated?'out':''}" tabindex="0"><span class="tok" style="background:${COL[q.id]}">${q.name[0]}</span><span class="n">${q.name}${q.id===ME?' (вы)':''}${q.insured?' 🛡':''}</span><span class="mut" style="font-size:12px">${q.cars.length} маш.</span><span class="m">${eur(q.cash)}</span><div class="pop"><div style="display:flex;justify-content:space-between;font-weight:600;font-size:15px"><span>${q.name}</span><span>${eur(q.cash)}</span></div>${q.cars.map(c=>{const k=s.catalog[c.id],d=DC[k.deck],di=defInfo(c);return `<div class="r"><span class="chip" style="background:${d[0]};color:${d[1]};min-width:70px;text-align:center">${DN[k.deck]}</span><span>${k.name} · ${eur(shownPrice(c))}</span><span style="color:${di?'#FF8A80':'#7FD49A'}">${di?di[0]:'целая'}</span></div>`}).join('')||'<div class="mut">нет машин</div>'}${debt}</div></div>`}).join('');
+ return `<div class="pl ${q.id===s.current?'cur':''} ${q.eliminated?'out':''}" tabindex="0">${pawn(q.id,40)}<span class="n">${q.name}${q.id===ME?' (вы)':''}${q.insured?' 🛡':''}</span><span class="mut" style="font-size:12px">${q.cars.length} маш.</span><span class="m">${eur(q.cash)}</span><div class="pop"><div style="display:flex;justify-content:space-between;font-weight:600;font-size:15px"><span>${q.name}</span><span>${eur(q.cash)}</span></div>${q.cars.map(c=>{const k=s.catalog[c.id],d=DC[k.deck],di=defInfo(c);return `<div class="r"><span class="chip" style="background:${d[0]};color:${d[1]};min-width:70px;text-align:center">${DN[k.deck]}</span><span>${k.name} · ${eur(shownPrice(c))}</span><span style="color:${di?'#FF8A80':'#7FD49A'}">${di?di[0]:'целая'}</span></div>`}).join('')||'<div class="mut">нет машин</div>'}${debt}</div></div>`}).join('');
 const bon=[me.saleBonusUntil>s.round?'+10% к продаже':'',me.repairBonusUntil>s.round?'−10% на ремонт':'',me.expo?'выставка ретро':'',me.insured?'страховка':''].filter(Boolean).join(' · ');
 $('#app').innerHTML=`<div class="vp"><div id="stage">
 <div class="hdr"><div><div class="ttl">RUST TO RICHES</div><div class="sub">от ржавого ведра до миллионера</div></div><div><span class="pill"><small>ЦЕЛЬ</small><b>${eur(s.goal)}</b></span><span class="pill"><small>РАУНД</small><b>${s.round}</b></span><span class="pill"><small>ТАЙМЕР</small><b id="tm"></b></span></div></div>
 <div class="board">${cells}<div class="center"><div class="act">${top}<div class="log">${logs.slice(0,5).map(l=>'<div>'+l+'</div>').join('')}</div></div><div class="gar"><div class="gh"><span>МОЙ ГАРАЖ</span><span>Деньги: <b>${eur(me.cash)}</b></span><span>Если продать всё сейчас: <b style="color:#2E7D46">${eur(minAll)}</b></span>${bon?`<span class="chip" style="background:#E3F1E6">${bon}</span>`:''}</div><div class="cols">${gar||'<div class="mut">Машин пока нет</div>'}</div>${overlay(s)}</div></div></div>
-<div class="pls">${players}</div><div id="info"></div></div></div>`;
+<div class="pls">${players}</div><div id="info"></div>${modalHTML}</div></div>`;
 scale();
 document.querySelectorAll('[data-cell]').forEach(e=>{const i=+e.dataset.cell;
  e.onmouseenter=()=>{infoK=i;showInfo(i)};e.onmouseleave=()=>{infoK=null;showInfo(null)};
@@ -1237,7 +1260,8 @@ document.querySelectorAll('.sc').forEach(e=>e.onchange=()=>{let x=0;document.que
 q('[data-swp]',()=>act({type:'swap_propose',carId:$('#sw1').value,target:+$('#swt').value,theirCarId:$('#sw2').value}));
 const swt=$('#swt');if(swt)swt.onchange=()=>{sw.t=+swt.value;render()};
 q('[data-sell]',()=>act({type:'sell',carIds:[...document.querySelectorAll('.sc:checked')].map(e=>e.value)}));
-q('#again',leave)}
+q('#again',leave);
+q('#mclose',()=>{modalOff=curKey;render()});q('#mopen',()=>{modalOff='';render()})}
 
 setInterval(()=>{if(!G||G.phase==='over')return;const t=$('#tm');if(t)t.textContent=Math.max(0,Math.ceil((deadline-Date.now())/1000))+' с'},250);
 boot();

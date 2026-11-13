@@ -1101,9 +1101,9 @@
    "deck": "family",
    "num": 1,
    "name": "Волгарь",
-   "buy": 1500,
-   "sell": 1500,
-   "auction_start": 1050,
+   "buy": 4000,
+   "sell": 5000,
+   "auction_start": 2500,
    "repair": {
     "type": "none"
    }
@@ -1113,9 +1113,9 @@
    "deck": "family",
    "num": 2,
    "name": "Фокусник",
-   "buy": 1600,
-   "sell": 1600,
-   "auction_start": 1120,
+   "buy": 4160,
+   "sell": 5200,
+   "auction_start": 2600,
    "repair": {
     "type": "none"
    }
@@ -1125,9 +1125,9 @@
    "deck": "family",
    "num": 3,
    "name": "Фью",
-   "buy": 1650,
-   "sell": 1650,
-   "auction_start": 1160,
+   "buy": 4320,
+   "sell": 5400,
+   "auction_start": 2700,
    "repair": {
     "type": "none"
    }
@@ -1137,9 +1137,9 @@
    "deck": "family",
    "num": 4,
    "name": "Фабка",
-   "buy": 1700,
-   "sell": 1700,
-   "auction_start": 1190,
+   "buy": 4480,
+   "sell": 5600,
+   "auction_start": 2800,
    "repair": {
     "type": "none"
    }
@@ -1149,9 +1149,9 @@
    "deck": "family",
    "num": 5,
    "name": "Октаха",
-   "buy": 1800,
-   "sell": 1800,
-   "auction_start": 1260,
+   "buy": 4640,
+   "sell": 5800,
+   "auction_start": 2900,
    "repair": {
     "type": "none"
    }
@@ -1161,9 +1161,9 @@
    "deck": "family",
    "num": 6,
    "name": "Пасс",
-   "buy": 1900,
-   "sell": 1900,
-   "auction_start": 1330,
+   "buy": 4800,
+   "sell": 6000,
+   "auction_start": 3000,
    "repair": {
     "type": "none"
    }
@@ -1173,9 +1173,9 @@
    "deck": "family",
    "num": 7,
    "name": "Инсигна",
-   "buy": 2000,
-   "sell": 2000,
-   "auction_start": 1400,
+   "buy": 4960,
+   "sell": 6200,
+   "auction_start": 3100,
    "repair": {
     "type": "none"
    }
@@ -1185,9 +1185,9 @@
    "deck": "family",
    "num": 8,
    "name": "508",
-   "buy": 2000,
-   "sell": 2000,
-   "auction_start": 1400,
+   "buy": 5120,
+   "sell": 6400,
+   "auction_start": 3200,
    "repair": {
     "type": "none"
    }
@@ -1197,9 +1197,9 @@
    "deck": "family",
    "num": 9,
    "name": "Малибушка",
-   "buy": 2100,
-   "sell": 2100,
-   "auction_start": 1470,
+   "buy": 5120,
+   "sell": 6400,
+   "auction_start": 3200,
    "repair": {
     "type": "none"
    }
@@ -1209,9 +1209,9 @@
    "deck": "family",
    "num": 10,
    "name": "Камрюха",
-   "buy": 2300,
-   "sell": 2300,
-   "auction_start": 1610,
+   "buy": 5280,
+   "sell": 6600,
+   "auction_start": 3300,
    "repair": {
     "type": "none"
    }
@@ -1221,9 +1221,9 @@
    "deck": "family",
    "num": 11,
    "name": "004",
-   "buy": 2400,
-   "sell": 2400,
-   "auction_start": 1680,
+   "buy": 5440,
+   "sell": 6800,
+   "auction_start": 3400,
    "repair": {
     "type": "none"
    }
@@ -1233,9 +1233,9 @@
    "deck": "family",
    "num": 12,
    "name": "Класс C",
-   "buy": 2500,
-   "sell": 2500,
-   "auction_start": 1750,
+   "buy": 5760,
+   "sell": 7200,
+   "auction_start": 3600,
    "repair": {
     "type": "none"
    }
@@ -1245,9 +1245,9 @@
    "deck": "family",
    "num": 13,
    "name": "Джулия",
-   "buy": 2800,
-   "sell": 2800,
-   "auction_start": 1960,
+   "buy": 6080,
+   "sell": 7600,
+   "auction_start": 3800,
    "repair": {
     "type": "none"
    }
@@ -1257,9 +1257,9 @@
    "deck": "family",
    "num": 14,
    "name": "005",
-   "buy": 3000,
-   "sell": 3000,
-   "auction_start": 2100,
+   "buy": 6400,
+   "sell": 8000,
+   "auction_start": 4000,
    "repair": {
     "type": "none"
    }
@@ -1269,9 +1269,9 @@
    "deck": "family",
    "num": 15,
    "name": "Класс E",
-   "buy": 3100,
-   "sell": 3100,
-   "auction_start": 2170,
+   "buy": 6800,
+   "sell": 8500,
+   "auction_start": 4250,
    "repair": {
     "type": "none"
    }
@@ -1281,9 +1281,9 @@
    "deck": "family",
    "num": 16,
    "name": "006",
-   "buy": 3300,
-   "sell": 3300,
-   "auction_start": 2310,
+   "buy": 7200,
+   "sell": 9000,
+   "auction_start": 4500,
    "repair": {
     "type": "none"
    }
@@ -1415,25 +1415,25 @@
     "deck": "vedro",
     "kind": "buyer",
     "name": "Есть покупатель",
-    "text": "Можешь продать эту тачку на «Скупке» как отремонтированную."
+    "text": "Можешь продать эту тачку у Перекупа или Дилера как отремонтированную."
    },
    {
     "deck": "vedro",
     "kind": "unrepairable",
     "name": "Распил",
-    "text": "Нельзя отремонтировать. Можно продать на «Скупке» вместе с дефектом по аукционной цене (голубая иконка) машины."
+    "text": "Нельзя отремонтировать. Можно продать у Перекупа или Дилера вместе с дефектом по аукционной цене (голубая иконка) машины."
    },
    {
     "deck": "vedro",
     "kind": "unrepairable",
     "name": "Запрет на регистрацию",
-    "text": "Нельзя отремонтировать. Можно продать на «Скупке» вместе с дефектом по аукционной цене (голубая иконка) машины."
+    "text": "Нельзя отремонтировать. Можно продать у Перекупа или Дилера вместе с дефектом по аукционной цене (голубая иконка) машины."
    },
    {
     "deck": "vedro",
     "kind": "unrepairable",
     "name": "Юридические проблемы",
-    "text": "Нельзя отремонтировать. Можно продать на «Скупке» вместе с дефектом по аукционной цене (голубая иконка) машины."
+    "text": "Нельзя отремонтировать. Можно продать у Перекупа или Дилера вместе с дефектом по аукционной цене (голубая иконка) машины."
    }
   ],
   "premium": [
