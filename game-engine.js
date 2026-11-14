@@ -49,7 +49,7 @@ const INSPECT_TEMPLATE = [
 ];
 const LOTTERY_TEMPLATE = [
   { kind: 'win', amount: 100 }, { kind: 'win', amount: 500 }, { kind: 'win', amount: 1000 },
-  { kind: 'buyer' }, { kind: 'insurance' }, { kind: 'swap' }, { kind: 'dps' }, { kind: 'evac' }, { kind: 'tire' },
+  { kind: 'buyer' }, { kind: 'insurance' }, { kind: 'dps' }, { kind: 'evac' }, { kind: 'tire' },
   { kind: 'birthday' }, ...CLASS_DECKS.map((deck) => ({ kind: 'recall', deck })), { kind: 'lux_tax' }, { kind: 'expo' },
 ];
 
@@ -144,6 +144,10 @@ function giveCar(s, p, cardId, depth = 0) {
     if (d.kind === 'buyer') car.sellAsRepaired = true;
   }
   p.cars.push(car);
+  if (p.pendingBuyer && card.deck !== 'retro') { // «Нашёл покупателя» из Лотереи ждал следующую купленную машину
+    p.pendingBuyer = false; car.buyer = true; car.sellAsRepaired = true;
+    ev(s, { type: 'buyer_found', player: p.id, cardId });
+  }
   ev(s, { type: 'car_gained', player: p.id, cardId, defect: car.defect ? car.defect.name : null, defectCost: car.defect && car.defect.repair ? car.defect.repair.cost : null, defectText: car.defect ? (car.defect.text || null) : null });
 }
 
@@ -178,7 +182,7 @@ function sellPrice(s, car, p = ownerOf(s, car)) {
   if (p && p.expo && card.deck === 'retro') price *= 1.1; // Лотерея: Выставка ретро
   return round10(price);
 }
-const isBroken = (c) => !c.repaired && !(c.defect && c.defect.kind === 'buyer');
+const isBroken = (c) => !c.repaired && !c.buyer && !(c.defect && c.defect.kind === 'buyer');
 const alive = (s) => s.players.filter((p) => !p.eliminated);
 const hasDebt = (s, p) => s.loans.some((l) => l.borrower === p.id);
 function carValue(s, car) { // оценка машины при взыскании долга: цена продажи, за вычетом ремонта, если он нужен
@@ -318,7 +322,7 @@ const LOAN_ACTIONS = {
     let total = 0;
     for (const id of new Set(a.carIds)) {
       const car = owned(p, id);
-      if (!car.defect || !['unrepairable', 'buyer'].includes(car.defect.kind)) fail('Эту машину можно продать только у Перекупа или Дилера');
+      if (!car.buyer && (!car.defect || !['unrepairable', 'buyer'].includes(car.defect.kind))) fail('Эту машину можно продать только у Перекупа или Дилера');
       total += sellPrice(s, car, p);
     }
     for (const id of new Set(a.carIds)) toBottom(s, owned(p, id));
@@ -698,7 +702,12 @@ function lottery(s, p, cell) {
   const pay = (q, x) => { const v = Math.min(q.cash, x); q.cash -= v; return v; };
   switch (c.kind) {
     case 'win': p.cash += c.amount; break;
-    case 'buyer': if (p.cars.some((x) => sellPrice(s, x, p) != null)) { s.phase = 'lot_sell'; return; } break;
+    case 'buyer': { // покупатель находится на случайную машину с дефектом (кроме Classic); нет такой — на следующую купленную
+      const opts = p.cars.filter((x) => !x.repaired && !x.buyer && !x.sellAsRepaired && s.catalog[x.id].deck !== 'retro');
+      if (opts.length) { const car = shuffle(s, opts.slice())[0]; car.buyer = true; car.sellAsRepaired = true; e.cardId = car.id; }
+      else { p.pendingBuyer = true; e.result = 'next'; }
+      break;
+    }
     case 'insurance': if (!p.insured && p.cash >= INSURANCE_COST) { s.phase = 'lot_insure'; return; } e.result = p.insured ? 'already' : 'no_money'; break;
     case 'swap': if (p.cars.length && s.players.some((q) => q.id !== p.id && !q.eliminated && q.cars.length)) { s.phase = 'lot_swap'; return; } break;
     case 'dps': e.amount = pay(p, 100 * p.cars.filter(isBroken).length); break;

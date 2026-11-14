@@ -522,3 +522,19 @@ test('места: 3 игрока — первый финиширует, двое
   assert.deepEqual(s.places, [a, second, third]); assert.equal(s.phase, 'over');
   assert.equal(s.players[third].finished, 3);
 });
+
+test('лотерея «Нашёл покупателя»: машина с дефектом продаётся как целая; без дефектов — на следующую купленную (кроме Classic)', () => {
+  let s = at(mk(2), 'lottery'); const p = s.current;
+  s.players[p].cars = [car(s, 'vedro-1', true), car(s, 'vedro-2', false, { kind: 'repair', deck: 'vedro', name: 'x', repair: { cost: 300 } })];
+  s.lotteryDeck = [{ kind: 'buyer' }];
+  s = ok(s, { type: 'lottery' });
+  const c2 = s.players[p].cars.find((c) => c.id === 'vedro-2');
+  assert.equal(c2.buyer, true);
+  let t = at(mk(2), 'lottery'); const q = t.current;
+  t.players[q].cars = [car(t, 'vedro-1', true)]; t.lotteryDeck = [{ kind: 'buyer' }];
+  t = ok(t, { type: 'lottery' });
+  assert.equal(t.players[q].pendingBuyer, true);
+  t.current = q; t.players[q].pos = BOARD.indexOf('family'); t.phase = 'act'; t.players[q].cash = 20000;
+  t = ok(t, { type: 'buy_start' }); t = ok(t, { type: 'buy_direct' });
+  assert.equal(t.players[q].cars.at(-1).buyer, true); assert.equal(t.players[q].pendingBuyer, false);
+});
