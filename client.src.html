@@ -22,17 +22,17 @@ html{overscroll-behavior:none}
 body.ingame{position:fixed;inset:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
 .ingame .vp{touch-action:none}.ingame .act,.ingame .modal,.ingame .pop,.ingame .log{touch-action:pan-y;overscroll-behavior:contain}.ingame .cols{touch-action:pan-x;overscroll-behavior:contain}
 /* кубики катаются прямо по столу (центр поля), без отдельного экрана */
-#dice{position:fixed;left:0;top:0;display:none;transform-origin:0 0;z-index:45;pointer-events:none;perspective:1100px;touch-action:none}
+#dice{position:fixed;left:0;top:0;display:none;transform-origin:0 0;z-index:45;pointer-events:none;touch-action:none}
 #dice.arm{pointer-events:auto;cursor:grab}
 #dice .d3l{position:absolute;left:50%;top:10px;transform:translateX(-50%);background:rgba(30,31,34,.88);color:#fff;font:600 22px Rubik,sans-serif;padding:8px 18px;border-radius:14px;white-space:nowrap;pointer-events:none;z-index:2}
 #dice .d3l b{font:400 30px 'Russo One',sans-serif;color:#FFC24A}
 .d3pos{position:absolute;left:50%;top:50%;width:110px;height:110px;margin:-55px 0 0 -55px;transform-style:preserve-3d;pointer-events:none}
-.cube{width:110px;height:110px;position:relative;transform-style:preserve-3d;transform:rotateX(-18deg) rotateY(24deg)}
+.cube{width:110px;height:110px;position:relative;transform-style:preserve-3d;transform:perspective(1000px) rotateZ(0deg) rotateX(-18deg) rotateY(24deg)}
 .cube .f{position:absolute;inset:0;background:#F5F0E6;border:2px solid #CFC6B4;border-radius:18px;box-sizing:border-box;display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);padding:15px;gap:6px;backface-visibility:hidden;box-shadow:inset 0 0 14px rgba(0,0,0,.18)}
 .cube .f i{border-radius:50%;background:#1E1F22}.cube .f i.o{visibility:hidden}
 .cube .f1{transform:translateZ(55px)}.cube .f6{transform:rotateY(180deg) translateZ(55px)}.cube .f2{transform:rotateY(90deg) translateZ(55px)}.cube .f5{transform:rotateY(-90deg) translateZ(55px)}.cube .f3{transform:rotateX(90deg) translateZ(55px)}.cube .f4{transform:rotateX(-90deg) translateZ(55px)}
-.d3shadow{position:absolute;left:-5px;top:100px;width:120px;height:36px;border-radius:50%;background:rgba(0,0,0,.35);filter:blur(6px)}
-#dice.arm .cube{animation:wob 1.2s ease-in-out infinite}@keyframes wob{50%{transform:rotateX(-26deg) rotateY(38deg) translateZ(14px)}}
+.d3shadow{position:absolute;left:10px;top:14px;width:110px;height:110px;border-radius:20px;background:rgba(0,0,0,.4);filter:blur(7px);transform:translateZ(-56px)}
+#dice.arm .cube{animation:wob 1.2s ease-in-out infinite}@keyframes wob{50%{transform:perspective(1000px) rotateZ(0deg) rotateX(-26deg) rotateY(38deg) translateZ(14px)}}
 .lcard{width:470px;height:260px;border-radius:16px;overflow:hidden;border:4px solid var(--lc);background:var(--card);display:flex;flex-direction:column;box-shadow:0 12px 30px rgba(0,0,0,.3);animation:fly .8s cubic-bezier(.2,.8,.2,1)}
 .lcard .lb{background:var(--lc);color:#fff;font:400 20px 'Russo One',sans-serif;padding:10px 16px;letter-spacing:.06em}
 .lcard .lt{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:16px;text-align:center}
@@ -282,10 +282,10 @@ function rollDice(label,values,vec,done,res){const n=values.length,el=diceLayer(
   let tx=ux*dist*(1-0.12*i)+ox*0.6,ty=uy*dist*(1-0.12*i);if(Math.abs(tx)>W){ty*=W/Math.abs(tx);tx=Math.sign(tx)*W}if(Math.abs(ty)>H){tx*=H/Math.abs(ty);ty=Math.sign(ty)*H}
   if(n>1&&i>0){const q=cubes[0]._t;if(q&&Math.hypot(tx-q[0],ty-q[1])<130){tx=q[0]+(tx>=q[0]?130:-130);if(Math.abs(tx)>W)tx=q[0]-(tx-q[0])}}
   p._t=[tx,ty];const sx=ox+(vec.x||0),sy=vec.y||0;p.style.transition='none';p.style.transform=`translate(${sx}px,${sy}px)`;
-  c.style.transition='none';c.style.transform='rotateX(-18deg) rotateY(24deg)';void c.offsetWidth;
-  const f=FROT[values[i]],nx=3+Math.floor(Math.random()*2),ny=2+Math.floor(Math.random()*2),rx=f[0]-14+360*nx*(ty>=0?-1:1),ry=f[1]+18+360*ny*(tx>=0?1:-1),tm=(1.5+0.15*i)+'s cubic-bezier(.12,.7,.22,1)';
+  c.style.transition='none';c.style.transform='perspective(1000px) rotateZ(0deg) rotateX(-18deg) rotateY(24deg)';void c.offsetWidth;
+  const f=FROT[values[i]],nx=3+Math.floor(Math.random()*2),ny=2+Math.floor(Math.random()*2),rx=f[0]+360*nx*(ty>=0?-1:1),ry=f[1]+360*ny*(tx>=0?1:-1),yaw=Math.round(Math.random()*50-25),tm=(1.5+0.15*i)+'s cubic-bezier(.12,.7,.22,1)';
   p.style.transition='transform '+tm;c.style.transition='transform '+tm;
-  requestAnimationFrame(()=>{p.style.transform=`translate(${tx}px,${ty}px)`;c.style.transform=`rotateX(${rx}deg) rotateY(${ry}deg)`})});
+  requestAnimationFrame(()=>{p.style.transform=`translate(${tx}px,${ty}px)`;c.style.transform=`perspective(1000px) rotateZ(${yaw}deg) rotateX(${rx}deg) rotateY(${ry}deg)`})});
  const sum=values.reduce((x,y)=>x+y,0);
  setTimeout(()=>{const l=$('#d3l');if(l)l.innerHTML=label+' — <b>'+(res||(n>1?values.join(' + ')+' = '+sum:sum))+'</b>'},1750);setTimeout(done,2450)}
 function showDice(evs){const L=[];evs.forEach(e=>{const d=e.dice||[e.die];if(e.type==='race_roll')L.push([nm(e.player)+(e.tie?' (перебросок)':''),d,e.player]);else if(e.type==='theft_roll')L.push([nm(e.player)+' · Угон',d,e.player,d.length>1?d.join(' и ')+(d[0]===d[1]?' — ДУБЛЬ, угон!':' — мимо'):null]);else if(e.type==='race_reroll')L.push([nm(e.player)+' (переброс)',d,e.player]);else if(e.type==='taxi')L.push([nm(e.player)+' · такси',d,e.player]);else if(e.type==='repair_roll'&&e.die)L.push(['Ремонт Crash · '+nm(e.player),d,e.player])});
@@ -441,7 +441,7 @@ function render(){
 if(!G)return lobby();
 document.body.classList.add('ingame');
 const s=G,me=s.players[ME]||s.players[0],cur=s.players[actor(s)]||s.players[s.current];
-const reach={};if(s.phase==='move'&&actor(s)===ME&&me.pos>=0)legalActions(s).filter(a=>a.type==='move').forEach(a=>{reach[(me.pos+a.steps)%BOARD.length]=a});
+const reach={};if(s.phase==='move'&&actor(s)===ME&&me.pos>=0)legalActions(s).filter(a=>a.type==='move').forEach(a=>{reach[a.to]=a});
 
 let cells='';for(let i=0;i<BOARD.length;i++)cells+=cellHTML(i,s,reach);
 // гараж: сначала столбики машин с дефектами, потом целые

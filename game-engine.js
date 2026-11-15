@@ -783,8 +783,8 @@ function legal(s) {
   const p = actor(s) == null ? null : s.players[actor(s)], out = [];
   if (s.phase === 'move') {
     for (let n = 1; n <= 7; n++) {
-      try { destination(s, p, n); } catch { continue; }
-      if (p.cash >= MOVE_COST[n]) out.push({ type: 'move', steps: n, cost: MOVE_COST[n] });
+      let to; try { to = destination(s, p, n); } catch { continue; } // занятые клетки пропускаются
+      if (p.cash >= MOVE_COST[n]) out.push({ type: 'move', steps: n, cost: MOVE_COST[n], to });
     }
   } else if (s.phase === 'act') {
     const cell = cellOf(s, p);
