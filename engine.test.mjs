@@ -90,9 +90,9 @@ test('аукцион: открытые торги, любой может пер�
   s = ok(s, { type: 'bid', player: b, amount: card.auction_start + 100 });
   assert.match(bad(s, { type: 'bid', player: b, amount: card.auction_start + 200 }), /уже лучшая/);
   assert.match(bad(s, { type: 'bid', player: a2, amount: card.auction_start + 100 }), /выше/);
-  s = ok(s, { type: 'bid', player: starter, amount: card.auction_start + 150 });
+  s = ok(s, { type: 'bid', player: starter, amount: card.auction_start + 200 });
   s = ok(s, { type: 'auction_close' });
-  assert.equal(s.players[starter].cash, 5000 - card.auction_start - 150);
+  assert.equal(s.players[starter].cash, 5000 - card.auction_start - 200);
   assert.ok(s.players[starter].cars.some((c) => c.id === id));
   assert.equal(s.phase, 'move'); assert.notEqual(s.current, starter);
 });
@@ -186,10 +186,10 @@ test('family: +10% за проход клетки, максимум +30%; при
   assert.equal(legalActions(s).find((a) => a.type === 'sell').quotes['family-1'], Math.round(s.catalog['family-1'].sell * 1.3 / 10) * 10);
 });
 
-test('банк: +5% к наличным', () => {
+test('банк: +10% к наличным', () => {
   let s = at(mk(2), 'bank'); const p = s.current; s.players[p].cash = 2000;
   s = ok(s, { type: 'bank' });
-  assert.equal(s.players[p].cash, 2100);
+  assert.equal(s.players[p].cash, 2200);
 });
 
 test('техосмотр: 100 € за машину, карта применяется', () => {
@@ -364,7 +364,7 @@ test('партии ботов (по 4 игрока) доходят до побе
         for (const id of ids) { if (done) break; done = try_({ type: 'repair', carIds: [id], player: who }); }
         done = done || try_({ type: 'repair', carIds: [], player: who });
       } else {
-        const t = { race_setup: 'race_open', race_join: 'race_close', race_reroll: 'race_keep', lot_sell: 'lot_skip', lot_insure: 'lot_skip', lot_swap: 'lot_skip', evac: 'lot_skip', swap_offer: 'swap_decline' }[s.phase];
+        const t = { race_setup: 'race_open', race_join: 'race_close', race_reroll: 'race_keep', lot_sell: 'lot_skip', lot_insure: 'lot_skip', lot_swap: 'lot_skip', evac: 'lot_skip', swap_offer: 'swap_decline', crash_roll: 'crash_roll' }[s.phase];
         if (s.phase === 'theft_pick') done = try_({ ...pick('theft_pick'), player: who });
         else done = try_({ type: t, player: who });
       }
@@ -483,11 +483,11 @@ test('аукцион: отказавшийся не может ставить; �
   const card = s.catalog[s.decks.premium[0]];
   s = ok(s, { type: 'buy_start' }); s = ok(s, { type: 'auction_start', amount: card.auction_start });
   s = ok(s, { type: 'auction_pass', player: t });
-  assert.match(bad(s, { type: 'bid', player: t, amount: card.auction_start + 10 }), /отказались/);
-  s = ok(s, { type: 'bid', player: w, amount: card.auction_start + 10 }); // теперь все, кроме лидера w, отказались? нет — p ещё в торгах
+  assert.match(bad(s, { type: 'bid', player: t, amount: card.auction_start + 100 }), /отказались/);
+  s = ok(s, { type: 'bid', player: w, amount: card.auction_start + 100 }); // теперь все, кроме лидера w, отказались? нет — p ещё в торгах
   assert.equal(s.phase, 'auction');
   s = ok(s, { type: 'auction_pass', player: p });
-  assert.equal(s.phase, 'move'); assert.equal(s.players[w].cash, 5000 - card.auction_start - 10);
+  assert.equal(s.phase, 'move'); assert.equal(s.players[w].cash, 5000 - card.auction_start - 100);
 });
 
 test('цель 100 000 € разрешена, другие значения нет', () => {
@@ -551,4 +551,16 @@ test('угон: два кубика, дубль — забираешь неот�
   const mine = s.players[p].cars.length;
   s = ok(s, { type: 'theft_pick', carId: 'vedro-1' });
   assert.equal(s.players[v].cars.length, 1); assert.equal(s.players[p].cars.length, mine + 1);
+});
+
+test('Crash: сразу после покупки владелец бросает кубик — он решает цену восстановления', () => {
+  let s = at(mk(2), 'bitye'); const p = s.current; s.players[p].cash = 9000;
+  s = ok(s, { type: 'buy_start' }); const id = s.pending.cardId;
+  s = ok(s, { type: 'buy_direct' });
+  assert.equal(s.phase, 'crash_roll'); assert.equal(s.current, p);
+  s.forcedRolls = [5];
+  s = ok(s, { type: 'crash_roll' });
+  const c = s.players[p].cars.find((x) => x.id === id);
+  assert.equal(c.roll, 5); assert.equal(s.phase, 'move'); assert.notEqual(s.current, p);
+  assert.equal(repairCosts(s, p)[id], s.catalog[id].repair.die_5_6);
 });

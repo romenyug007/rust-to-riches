@@ -10,7 +10,8 @@ export const BOARD = [
 const DEALER_POS = 0, FAMILY_POS = BOARD.indexOf('family');
 export const INSPECT_PER_CAR = 100;  // Техосмотр: 100 € за каждую машину
 export const BONUS_ROUNDS = 2;       // бонусы Техосмотра действуют 2 круга игры
-export const BANK_RATE = 0.05;       // Банк: +5% к наличным
+export const AUCTION_STEP = 100;     // аукцион: каждая ставка выше минимум на 100 €
+export const BANK_RATE = 0.1;        // Банк: +10% к наличным
 export const INSURANCE_COST = 200;   // Страховка из Лотереи, до конца игры
 export const FAMILY_STEP = 0.1, FAMILY_MAX = 3; // Family: +10% за проход клетки, максимум 3 раза
 const round10 = (x) => Math.round(x / 10) * 10;
@@ -143,6 +144,7 @@ function giveCar(s, p, cardId, depth = 0) {
     car.defect = d;
     if (d.kind === 'buyer') car.sellAsRepaired = true;
   }
+  if (card.deck === 'bitye') car.needRoll = true; // Crash: цену восстановления сразу решает кубик
   p.cars.push(car);
   if (p.pendingBuyer && card.deck !== 'retro') { // «Нашёл покупателя» из Лотереи ждал следующую купленную машину
     p.pendingBuyer = false; car.buyer = true; car.sellAsRepaired = true;
@@ -165,7 +167,7 @@ function repairCost(s, car, p = ownerOf(s, car)) {
   if (car.defect && car.defect.repair) cost = car.defect.repair.cost; // дефект (в т.ч. скрытый с Техосмотра)
   else if (card.deck === 'retro') cost = card.repair.cost;
   else if (card.deck === 'bitye') {
-    const r = s.repairRoll;
+    const r = car.roll ?? s.repairRoll;
     if (r == null) return null;
     cost = card.repair[r <= 2 ? 'die_1_2' : r <= 4 ? 'die_3_4' : 'die_5_6'];
   } else return null;
@@ -231,7 +233,10 @@ function settleLoans(s, p) {
 }
 function nextTurn(s) {
   if (cur(s) && cur(s).pos === DEALER_POS) cur(s).expo = false; // Выставка ретро — до Дилера
-  s.pending = s.auction = s.race = s.repairRoll = s.loanReq = s.loanReturn = s.swapOffer = s.theft = null;
+  s.pending = s.auction = s.race = s.repairRoll = s.loanReq = s.loanReturn = s.swapOffer = s.theft = s.crashRoll = null;
+  // купленная машина Crash — до передачи хода её владелец бросает кубик на цену восстановления
+  const cr = s.players.find((q) => !q.eliminated && q.cars.some((c) => c.needRoll));
+  if (cr) { s.phase = 'crash_roll'; s.crashRoll = { player: cr.id, carId: cr.cars.find((c) => c.needRoll).id }; return; }
   const n = s.players.length;
   for (let g = 0; g < 4 * n; g++) {
     s.current = (s.current + 1) % n;
@@ -283,6 +288,7 @@ export function actor(s) {
   if (s.phase === 'loan') return s.loanReq.borrower;
   if (s.phase === 'swap_offer') return s.swapOffer.to;
   if (s.phase === 'race_roll') return s.race.queue[0]; // бросает по очереди сам участник
+  if (s.phase === 'crash_roll') return s.crashRoll.player; // кубик на ремонт купленной машины Crash
   if (s.phase === 'auction') return null;   // открытые торги: могут все
   if (s.phase === 'race_join') return null; // открытое окно: могут все
   if (s.phase === 'over') return null;
@@ -405,7 +411,7 @@ const HANDLERS = {
       }
       case 'autoservice': {
         if (cell !== 'avtoservis') fail('Это не автосервис');
-        s.repairRoll = p.cars.some((c) => !c.repaired && !c.defect && s.catalog[c.id].deck === 'bitye') ? die(s) : null;
+        s.repairRoll = p.cars.some((c) => !c.repaired && !c.defect && c.roll == null && s.catalog[c.id].deck === 'bitye') ? die(s) : null;
         s.phase = 'repair';
         return ev(s, { type: 'repair_roll', player: p.id, die: s.repairRoll });
       }
@@ -510,7 +516,7 @@ const HANDLERS = {
     if (a.type === 'bid') {
       if (A.passed.includes(p.id)) fail('Вы отказались от торгов');
       if (p.id === A.bidder) fail('Ваша ставка уже лучшая');
-      if (!Number.isInteger(a.amount) || a.amount <= A.bid) fail('Ставка должна быть выше текущей');
+      if (!Number.isInteger(a.amount) || a.amount < A.bid + AUCTION_STEP) fail('Ставка должна быть выше текущей минимум на ' + AUCTION_STEP + ' €');
       if (a.amount > p.cash) fail('Не хватает денег');
       A.bid = a.amount; A.bidder = p.id;
       ev(s, { type: 'bid', player: p.id, amount: a.amount, seconds: AUCTION_SECONDS });
@@ -576,6 +582,13 @@ const HANDLERS = {
     if (!raceEligible(s).length) raceRoll(s);
   },
 
+  crash_roll(s, p, a) {
+    if (a.type !== 'crash_roll') fail('Бросьте кубик на ремонт');
+    const car = owned(p, s.crashRoll.carId), d = die(s);
+    car.roll = d; delete car.needRoll;
+    ev(s, { type: 'repair_roll', player: p.id, die: d, cardId: car.id, cost: repairCost(s, car, p) });
+    nextTurn(s);
+  },
   race_roll(s, p, a) {
     const R = s.race;
     if (a.type !== 'race_roll') fail('Бросьте кубик');
@@ -812,7 +825,7 @@ function legal(s) {
     out.push({ type: 'decline' });
   } else if (s.phase === 'auction') {
     out.push({ type: 'auction_pass' });
-    out.push({ type: 'bid', min: s.auction.bid + 1 }, { type: 'auction_close' });
+    out.push({ type: 'bid', min: s.auction.bid + AUCTION_STEP }, { type: 'auction_close' });
   } else if (s.phase === 'repair') {
     out.push({ type: 'repair', carIds: p.cars.filter((c) => repairCost(s, c) != null).map((c) => c.id), roll: s.repairRoll });
   } else if (s.phase === 'race_setup') {
@@ -823,6 +836,8 @@ function legal(s) {
     out.push({ type: 'race_reroll' }, { type: 'race_keep' });
   } else if (s.phase === 'race_roll') {
     out.push({ type: 'race_roll' });
+  } else if (s.phase === 'crash_roll') {
+    out.push({ type: 'crash_roll', carId: s.crashRoll.carId });
   } else if (s.phase === 'loan') {
     out.push({ type: 'loan_cancel' });
   } else if (s.phase === 'lot_sell') {
@@ -879,7 +894,7 @@ export function timeoutStep(s) {
   const a = {
     loan: { type: 'loan_cancel' }, move: { type: 'move', steps: 1 },
     act: p && p.cars.length ? { type: 'taxi', carId: [...p.cars].sort((x, y) => s.catalog[y.id].sell - s.catalog[x.id].sell)[0].id } : null, // такси на самой дорогой машине
-    buy: { type: 'decline' }, auction: { type: 'auction_close' }, repair: { type: 'repair', carIds: [] },
+    buy: { type: 'decline' }, crash_roll: { type: 'crash_roll' }, auction: { type: 'auction_close' }, repair: { type: 'repair', carIds: [] },
     race_setup: { type: 'race_open' }, race_join: { type: 'race_close' }, race_roll: { type: 'race_roll' }, race_reroll: { type: 'race_keep' },
     lot_sell: { type: 'lot_skip' }, lot_insure: { type: 'lot_skip' }, lot_swap: { type: 'lot_skip' }, evac: { type: 'lot_skip' },
     swap_offer: { type: 'swap_decline' }, theft_pick: s.theft ? { type: 'theft_pick', carId: s.theft.options[0] } : null,
