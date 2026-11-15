@@ -249,12 +249,12 @@ test('гонка: вызов — оба платят, взнос кратен 10
   assert.match(bad(s, { type: 'race_challenge', target: t, stake: 1100 }), /половины/);
   assert.match(bad(s, { type: 'race_challenge', target: t, stake: 150 }), /кратен/);
   assert.match(bad(s, { type: 'race_challenge', target: t, stake: 0 }), /кратен/);
-  s.forcedRolls = [2, 5, 3];
+  s.forcedRolls = [1, 1, 2, 3];   // организатор 1+1=2, вызванный 2+3=5
   s = ok(s, { type: 'race_challenge', target: t, stake: 500 });
   assert.equal(s.phase, 'race_join'); assert.equal(actor(s), null);
   s = ok(s, { type: 'race_skip', player: u });   // третий отказался — окно закрылось досрочно
   s = keep(s);
-  assert.equal(s.players[t].cash, 2000 - 500 + 2000); // 2+1=3 < 5, победил вызванный
+  assert.equal(s.players[t].cash, 2000 - 500 + 2000); // 2 < 5, победил вызванный
   assert.equal(s.players[p].cash, 2000 - 500);
 });
 
@@ -280,26 +280,26 @@ test('гонка: окно по таймеру (race_close) запускает �
   assert.equal(s.phase, 'move');
 });
 
-test('гонка с перебросом: при <6 можно перебросить, берётся максимум', () => {
+test('гонка с перебросом: при сумме <12 можно перебросить, берётся максимум', () => {
   let s = at(mk(2), 'gonka_reroll'); const p = s.current, o = (p + 1) % 2;
   s.players.forEach((q) => (q.cash = 2000));
   s = ok(s, { type: 'race_start' });
-  s.forcedRolls = [1, 4, 3];            // организатор 1, соперник 4, переброс 3
+  s.forcedRolls = [1, 1, 2, 2, 1, 2];   // организатор 2, соперник 4, переброс 3
   s = ok(s, { type: 'race_challenge', target: o, stake: 100 });
   assert.equal(s.phase, 'race_reroll');
   s = ok(s, { type: 'race_reroll' });
-  assert.equal(s.players[o].cash, 2000 - 100 + 1200); // max(1,3)=3 < 4
+  assert.equal(s.players[o].cash, 2000 - 100 + 1200); // max(2,3)=3 < 4
   // 5 и затем 1 → остаётся 5
   let s2 = at(mk(2), 'gonka_reroll'); const p2 = s2.current, o2 = (p2 + 1) % 2;
   s2.players.forEach((q) => (q.cash = 2000));
-  s2 = ok(s2, { type: 'race_start' }); s2.forcedRolls = [5, 4, 1];
+  s2 = ok(s2, { type: 'race_start' }); s2.forcedRolls = [2, 3, 2, 2, 1, 1];
   s2 = ok(s2, { type: 'race_challenge', target: o2, stake: 100 });
   s2 = ok(s2, { type: 'race_reroll' });
   assert.equal(s2.players[p2].cash, 2000 - 100 + 1200);
-  // выпала 6 — решения о перебросе нет
+  // выпало 12 — решения о перебросе нет
   let s3 = at(mk(2), 'gonka_reroll'); const p3 = s3.current, o3 = (p3 + 1) % 2;
   s3.players.forEach((q) => (q.cash = 2000));
-  s3 = ok(s3, { type: 'race_start' }); s3.forcedRolls = [6, 2];
+  s3 = ok(s3, { type: 'race_start' }); s3.forcedRolls = [6, 6, 1, 1];
   s3 = ok(s3, { type: 'race_challenge', target: o3, stake: 100 });
   assert.equal(s3.phase, 'move'); assert.equal(s3.players[p3].cash, 2000 - 100 + 1200);
 });
@@ -456,7 +456,7 @@ test('гонка: одинаковые числа — перебрасывают
   s.players.forEach((x) => (x.cash = 3000)); s = ok(s, { type: 'race_start' });
   let r = applyAction(s, { type: 'race_challenge', player: o, target: t, stake: 100 }); s = r.state;
   s = applyAction(s, { type: 'race_join', player: w }).state;
-  s.forcedRolls = [6, 6, 2, 1, 5];  // организатор 6, вызванный 6, вступивший 2 → ничья 6:6; перебросок: 1 и 5
+  s.forcedRolls = [6, 6, 6, 6, 1, 1, 1, 1, 2, 3];  // 12:12:2 → ничья; переброс: 2 и 5
   for (let i = 0; i < 3; i++) s = applyAction(s, { type: 'race_roll', player: s.race.queue[0] }).state;
   assert.equal(s.phase, 'race_roll'); assert.deepEqual(s.race.queue, [o, t]); assert.equal(s.race.round, 2);
   const c = s.players[t].cash;
@@ -537,4 +537,18 @@ test('лотерея «Нашёл покупателя»: машина с деф
   t.current = q; t.players[q].pos = BOARD.indexOf('family'); t.phase = 'act'; t.players[q].cash = 20000;
   t = ok(t, { type: 'buy_start' }); t = ok(t, { type: 'buy_direct' });
   assert.equal(t.players[q].cars.at(-1).buyer, true); assert.equal(t.players[q].pendingBuyer, false);
+});
+
+test('угон: два кубика, дубль — забираешь неотремонтированную машину у игрока впереди, иначе ничего', () => {
+  let s = at(mk(2), 'ugon'); const p = s.current, v = (p + 1) % 2;
+  s.players[v].pos = (s.players[p].pos + 3) % 16;
+  s.players[v].cars = [car(s, 'premium-1', true), car(s, 'vedro-1', false)];
+  let s1 = structuredClone(s); s1.forcedRolls = [3, 4];
+  s1 = ok(s1, { type: 'theft' }); assert.notEqual(s1.phase, 'theft_pick'); assert.equal(s1.players[v].cars.length, 2);
+  s.forcedRolls = [5, 5];
+  s = ok(s, { type: 'theft' }); assert.equal(s.phase, 'theft_pick');
+  assert.deepEqual(s.theft.options, ['vedro-1']);    // отремонтированные не угоняют
+  const mine = s.players[p].cars.length;
+  s = ok(s, { type: 'theft_pick', carId: 'vedro-1' });
+  assert.equal(s.players[v].cars.length, 1); assert.equal(s.players[p].cars.length, mine + 1);
 });

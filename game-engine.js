@@ -579,9 +579,9 @@ const HANDLERS = {
   race_roll(s, p, a) {
     const R = s.race;
     if (a.type !== 'race_roll') fail('Бросьте кубик');
-    const d = die(s);
+    const d1 = die(s), d2 = die(s), d = d1 + d2; // в гонке бросают два кубика, очки складываются
     R.rolls[p.id] = d;
-    ev(s, { type: 'race_roll', player: p.id, die: d, tie: R.round > 1 });
+    ev(s, { type: 'race_roll', player: p.id, die: d, dice: [d1, d2], tie: R.round > 1 });
     R.queue.shift();
     if (!R.queue.length) raceAfterRolls(s);
   },
@@ -589,8 +589,8 @@ const HANDLERS = {
   race_reroll(s, p, a) {
     const R = s.race;
     if (a.type === 'race_reroll') {
-      const d = die(s);
-      ev(s, { type: 'race_reroll', player: p.id, die: d, first: R.rolls[p.id] });
+      const d1 = die(s), d2 = die(s), d = d1 + d2;
+      ev(s, { type: 'race_reroll', player: p.id, die: d, dice: [d1, d2], first: R.rolls[p.id] });
       R.rolls[p.id] = Math.max(R.rolls[p.id], d);
     } else if (a.type !== 'race_keep') fail('Перебросить или оставить');
     raceResolve(s);
@@ -724,15 +724,15 @@ function lottery(s, p, cell) {
   }
   nextTurn(s);
 }
-function theft(s, p, cell) { // Угон: 5 — неотремонтированную Economy/Crash/Family, 6 — любого класса; у ближайшего игрока впереди
+function theft(s, p, cell) { // Угон: два кубика; дубль — забираешь любую неотремонтированную машину (любого класса) у ближайшего игрока впереди
   if (cell !== 'ugon') fail('Это не Угон');
-  const d = die(s), n = BOARD.length;
+  const d1 = die(s), d2 = die(s), d = d1 + d2, n = BOARD.length;
   const ahead = alive(s).filter((q) => q.id !== p.id).map((q) => ({ q, dist: ((q.pos - p.pos + n) % n) || n })).sort((x, y) => x.dist - y.dist)[0];
-  const e = ev(s, { type: 'theft_roll', player: p.id, die: d, victim: ahead ? ahead.q.id : null });
-  if (d < 5 || !ahead) return nextTurn(s);
+  const e = ev(s, { type: 'theft_roll', player: p.id, die: d, dice: [d1, d2], double: d1 === d2, victim: ahead ? ahead.q.id : null });
+  if (d1 !== d2 || !ahead) return nextTurn(s);
   const v = ahead.q;
   if (v.insured) { e.result = 'insured'; return nextTurn(s); }
-  const opts = v.cars.filter((c) => !c.repaired && (d === 6 || ['vedro', 'bitye', 'family'].includes(s.catalog[c.id].deck)))
+  const opts = v.cars.filter((c) => !c.repaired)
     .sort((x, y) => s.catalog[y.id].sell - s.catalog[x.id].sell).map((c) => c.id);
   if (!opts.length) { e.result = 'nothing'; return nextTurn(s); }
   s.theft = { victim: v.id, die: d, options: opts };
@@ -760,7 +760,7 @@ function raceAfterRolls(s) {
     ev(s, { type: 'race_rolls', rolls: { ...R.rolls }, order: [...R.participants] });
     const cell = BOARD[org.pos];
     if (cell === 'gonka_plus1') { R.rolls[org.id] += 1; ev(s, { type: 'race_plus1', player: org.id }); }
-    else if (cell === 'gonka_reroll' && R.rolls[org.id] < 6) { s.phase = 'race_reroll'; return; }
+    else if (cell === 'gonka_reroll' && R.rolls[org.id] < 12) { s.phase = 'race_reroll'; return; }
   }
   raceResolve(s);
 }
